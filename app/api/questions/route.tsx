@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 
 // const questionDB = "https://jsonplaceholder.typicode.com/todos"
-const questionDB: string = "http://localhost:4001/questions" as string
+const questionDB: string = "http://localhost:4000/questions" as string
 
 export async function GET() {
   try {
@@ -11,7 +11,7 @@ export async function GET() {
     }
     const data = await response.json();
     return NextResponse.json(data);
-  } catch (error) {
+  } catch {
     return NextResponse.error();
   }
 }
