@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 
 // const questionDB = "https://jsonplaceholder.typicode.com/todos"
-const questionDB: string = "http://192.168.86.69:4000/questions" as string
+const questionDB: string = "https://questions.jobe.top/questions" as string
 
 export async function GET() {
   try {
