@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server'
 
+let url = process.env.QUESTION_DB_URL
+
+
 // const questionDB = "https://jsonplaceholder.typicode.com/todos"
-const questionDB: string = "https://questions.jobe.top/questions" as string
+const questionDB: string = url as string
 
 export async function GET() {
   try {
