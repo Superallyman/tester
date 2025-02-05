@@ -1,3 +1,5 @@
+// layout.tsx
+
 import type { Metadata } from "next";
 // import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -5,6 +7,7 @@ import "./globals.css";
 //components
 import Navbar from "./components/Navbar";
 
+import { ThemeProvider } from "@/components/ui/theme-provider";
 // const geistSans = Geist({
 //   variable: "--font-geist-sans",
 //   subsets: ["latin"],
@@ -28,8 +31,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <Navbar />
-        {children}
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system">
+          <Navbar />
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );

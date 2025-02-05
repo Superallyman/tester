@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-let url = process.env.QUESTION_DB_URL
+const url = process.env.QUESTION_DB_URL
 
 
 // const questionDB = "https://jsonplaceholder.typicode.com/todos"

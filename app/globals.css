@@ -1,71 +1,71 @@
+/* globals.css */
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-  --card-bg: #ffffff; /* Light mode card background */
-  --card-text: #171717; /* Light mode card text */
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-    --card-bg: #1a1a1a; /* Dark mode card background */
-    --card-text: #ededed; /* Dark mode card text */
-  }
-}
 
 body {
-  color: var(--foreground);
-  background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* Component.module.css */
-.myComponent {
-  color: var(--foreground);
-  background: var(--background);
-}
 
 /* Base styles */
 @layer base {
-  .text-primary {
-    color: #ff6b6b;
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 240 5.9% 10%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 240 5.9% 10%;
+    --radius: 1rem;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
   }
-  .text-secondary {
-    color: #f9a826;
-  }
-  .text-tertiary {
-    color: #f9f871;
-  }
-  .bg-primary {
-    background-color: #ff6b6b;
-  }
-  .bg-secondary {
-    background-color: #f9a826;
-  }
-  .bg-tertiary {
-    background-color: #f9f871;
-  }
-}
 
-h1, h2 {
-  @apply font-bold text-primary text-lg;
-}
-
-main {
-  @apply max-w-5xl my-12 mx-auto px-8;
-}
-
-main > h2 {
-  @apply mb-4 pb-2 text-base;
-}
-
-p > a {
-  @apply text-primary underline;
+  .dark {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 5.9% 10%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 240 4.9% 83.9%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
 }
 
 /* Nav styles */
@@ -80,69 +80,4 @@ nav a:hover {
 }
 main nav {
   @apply border-0;
-}
-
-/* Button styles */
-button {
-  @apply px-3 py-2 rounded-sm flex justify-between items-center gap-2 text-sm;
-}
-button:hover {
-  @apply bg-opacity-90;
-}
-.btn-primary {
-  @apply bg-primary text-black;
-}
-.btn-secondary {
-  @apply bg-gray-200 text-gray-900;
-}
-
-/* Form styles */
-form {
-  @apply py-4 px-7 bg-primary bg-opacity-5 rounded-md block mx-auto min-w-fit w-1/4;
-}
-form label {
-  @apply block;
-}
-form input,
-form textarea,
-form select {
-  @apply block mt-2 my-4 px-2 py-1 rounded-sm w-full;
-}
-form button {
-  @apply block mx-auto;
-}
-
-/* Feedback styles */
-.error {
-  @apply border-2 border-red-500 bg-red-300 text-red-800 py-1 px-2 rounded-sm block max-w-fit my-4 mx-auto;
-}
-
-/* Card styles */
-.card {
-  background: var(--card-bg);
-  color: var(--card-text);
-  @apply shadow-sm rounded-md py-3 px-4 my-4 relative overflow-hidden;
-}
-.card h3 {
-  @apply font-bold text-sm mb-0;
-}
-.card p {
-  @apply my-4 text-sm leading-6;
-}
-
-/* Pill styles */
-.pill {
-  @apply py-1 px-2 mt-3 inline-block text-xs font-semibold;
-}
-.pill.high {
-  @apply bg-red-300 text-red-600;
-}
-.pill.medium {
-  @apply bg-blue-300 text-blue-600;
-}
-.pill.low {
-  @apply bg-emerald-300 text-emerald-600;
-}
-.card .pill {
-  @apply absolute bottom-0 right-0 rounded-tl-md;
 }
