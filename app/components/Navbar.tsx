@@ -9,6 +9,9 @@ import Image from "next/image";
 import Logo from "../../public/eye.svg";
 import { ModeToggle } from "./ui/toggle-mode";
 
+import { usePathname } from "next/navigation";
+
+
 //auth stuff
 import { signIn, signOut, useSession } from "next-auth/react";
 
@@ -32,6 +35,8 @@ function AuthButton() {
 }
 
 export default function Navbar() {
+  const pathname = usePathname();
+
   return (
     <nav className="flex items-center justify-between w-full px-6 py-4">
       <Link href="/">
@@ -42,6 +47,21 @@ export default function Navbar() {
           className="dark:invert"
         />
       </Link>
+      {/* Hide Quick Test when on "/" */}
+      {pathname !== "/" && (
+        <Link href="/">
+          <p>Quick Test</p>
+        </Link>
+      )}
+
+      {/* Hide Performance Analytics when on "/data" */}
+      {pathname !== "/data" && (
+        <Link href="/data">
+          <p>Performance Analytics</p>
+        </Link>
+      )}
+
+
       <AuthButton />
       <ModeToggle />
     </nav>
