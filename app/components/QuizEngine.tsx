@@ -5,19 +5,29 @@ import { supabase } from '@/utils/supabase';
 import { useSession } from "next-auth/react";
 import { decode } from 'html-entities';
 
+// 1. Define a strict interface for the Question object
+interface Question {
+    id: string;
+    question_text: string;
+    options: string[];
+    correct_answers: string[];
+    explanation: string;
+    category: string;
+}
+
 interface QuizEngineProps {
     questionIds: string[];
 }
 
 export default function QuizEngine({ questionIds }: QuizEngineProps) {
     const { data: session } = useSession();
-    const [questions, setQuestions] = useState<any[]>([]);
+    // 2. Replace any[] with Question[]
+    const [questions, setQuestions] = useState<Question[]>([]);
     const [userSelections, setUserSelections] = useState<Record<string, string[]>>({});
     const [ratings, setRatings] = useState<Record<string, number>>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [hasSubmitted, setHasSubmitted] = useState(false);
 
-    // Timer State
     const [seconds, setSeconds] = useState(0);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -40,7 +50,7 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
     };
 
     const score = hasSubmitted ? calculateScore() : 0;
-    const percentage = (score / questions.length) * 100;
+    const percentage = questions.length > 0 ? (score / questions.length) * 100 : 0;
 
     useEffect(() => {
         async function fetchQuestions() {
@@ -48,12 +58,13 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
 
             const { data } = await supabase
                 .from('questions')
-                .select(`*, user_activity (*)`)
-                .in('id', questionIds); // Fetch questions matching the passed UUIDs
+                .select(`*`)
+                .in('id', questionIds);
 
             if (data) {
-                // Sort data to match the order of IDs passed in the prop
-                const sortedData = questionIds.map(id => data.find(q => q.id === id)).filter(Boolean);
+                const sortedData = questionIds
+                    .map(id => data.find(q => q.id === id))
+                    .filter((q): q is Question => !!q);
 
                 const decodedData = sortedData.map(q => ({
                     ...q,
@@ -74,7 +85,7 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
         return () => {
             if (timerRef.current) clearInterval(timerRef.current);
         };
-    }, [questionIds]); // Re-run if the list of IDs changes
+    }, [questionIds]);
 
     const toggleOption = (qId: string, option: string) => {
         if (hasSubmitted) return;
@@ -110,7 +121,8 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
         setIsSubmitting(false);
     };
 
-    const getOptionStyle = (q: any, opt: string) => {
+    // 3. Explicitly type the helper function
+    const getOptionStyle = (q: Question, opt: string): React.CSSProperties => {
         const selected = userSelections[q.id] || [];
         const isSelected = selected.includes(opt);
         const isCorrect = q.correct_answers.includes(opt);
@@ -142,7 +154,7 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
                 <div style={{ padding: '1.5rem', borderRadius: '12px', border: '2px solid #0070f3', marginBottom: '2rem', textAlign: 'center' }}>
                     <h2 style={{ margin: 0 }}>Quiz Complete!</h2>
                     <p style={{ fontSize: '1.2rem', margin: '10px 0' }}>
-                        You scored <strong>{score}</strong> out of <strong>{questions.length}</strong> ({percentage}%) in {formatTime(seconds)}.
+                        You scored <strong>{score}</strong> out of <strong>{questions.length}</strong> ({percentage.toFixed(1)}%) in {formatTime(seconds)}.
                     </p>
                     <div style={{ background: '#e2e8f0', height: '12px', borderRadius: '10px', overflow: 'hidden' }}>
                         <div style={{ background: '#0070f3', height: '100%', width: `${percentage}%`, transition: 'width 1s ease-in-out' }} />
@@ -155,7 +167,10 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <h3>{idx + 1}. {q.question_text}</h3>
                         {hasSubmitted && (
-                            <span style={{ fontWeight: 'bold', color: (userSelections[q.id]?.every(v => q.correct_answers.includes(v)) && userSelections[q.id]?.length === q.correct_answers.length) ? 'green' : 'red' }}>
+                            <span style={{ 
+                                fontWeight: 'bold', 
+                                color: (userSelections[q.id]?.every(v => q.correct_answers.includes(v)) && userSelections[q.id]?.length === q.correct_answers.length) ? 'green' : 'red' 
+                            }}>
                                 {(userSelections[q.id]?.every(v => q.correct_answers.includes(v)) && userSelections[q.id]?.length === q.correct_answers.length) ? 'CORRECT' : 'INCORRECT'}
                             </span>
                         )}
@@ -164,7 +179,7 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                         {q.options.map((opt: string, optIdx: number) => (
                             <button
-                                key={`${q.id}-opt-${optIdx}`} // Use a combination of Q-ID and index
+                                key={`${q.id}-opt-${optIdx}`}
                                 onClick={() => toggleOption(q.id, opt)}
                                 disabled={hasSubmitted}
                                 style={{
@@ -187,7 +202,6 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
 
                     {!hasSubmitted && (
                         <div style={{ marginTop: '15px', position: 'relative' }}>
-
                             <div style={{ position: 'relative', width: '100%' }}>
                                 <input
                                     type="range"
@@ -199,9 +213,9 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
                                     }
                                     style={{ width: '100%' }}
                                 />
-                            <label style={{ fontSize: '0.6rem', display: 'block' }}>
-                                Rate your confidence level (1=easy to 10=hard af):
-                            </label>
+                                <label style={{ fontSize: '0.6rem', display: 'block' }}>
+                                    Rate your confidence level (1=easy to 10=hard af):
+                                </label>
 
                                 <div
                                     style={{

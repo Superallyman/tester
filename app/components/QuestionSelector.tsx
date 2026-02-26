@@ -21,11 +21,9 @@ export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorP
     const [unseenOnly, setUnseenOnly] = useState(false);
     const [loading, setLoading] = useState(false);
 
-
     const [minRating, setMinRating] = useState(1);
     const [maxRating, setMaxRating] = useState(10);
-    const [notMasteredOnly, setNotMasteredOnly] = useState(false); // New: Never got correct
-
+    const [notMasteredOnly, setNotMasteredOnly] = useState(false); 
 
     const [noResults, setNoResults] = useState(false);
 
@@ -51,11 +49,7 @@ export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorP
             });
 
             const uniqueCats = Object.keys(totalPerCat).sort();
-
             setAvailableCategories(uniqueCats);
-
-            // Optional: if you want the counts stored too
-            // setCategoryCounts(totalPerCat);
         }
 
         getCategories();
@@ -79,18 +73,15 @@ export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorP
 
     const findQuestions = async () => {
         setLoading(true);
-        setNoResults(false); // Reset on every new search
+        setNoResults(false); 
         const userEmail = session?.user?.email || "anonymous";
 
         try {
-            // 1. Get ALL activity data for the user
             const { data: activityData } = await supabase
                 .from('user_activity')
                 .select('question_id, is_correct, user_rating')
                 .eq('user_email', userEmail);
 
-            // 2. AGGREGATE DATA BY QUESTION
-            // We need a map where the key is question_id and the value is its aggregate stats
             const statsByQuestion: Record<string, { totalRating: number, count: number, mastered: boolean }> = {};
 
             activityData?.forEach(a => {
@@ -106,21 +97,14 @@ export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorP
             let targetIds: string[] | null = null;
 
             if (!unseenOnly) {
-                // Filter the AGGREGATED stats based on the UI sliders
                 targetIds = seenIds.filter(id => {
                     const stats = statsByQuestion[id];
                     const avgRating = stats.totalRating / stats.count;
-
-                    // Condition A: Matches the Average Rating Range
                     const matchesRating = avgRating >= minRating && avgRating <= maxRating;
-
-                    // Condition B: Matches Mastery Filter (if checked, only return if never got correct)
                     const matchesMastery = notMasteredOnly ? !stats.mastered : true;
-
                     return matchesRating && matchesMastery;
                 });
 
-                // GENTLE CHECK: Instead of throwing an error, we set a state and exit
                 if (targetIds.length === 0) {
                     setNoResults(true);
                     setLoading(false);
@@ -128,10 +112,8 @@ export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorP
                 }
             }
 
-            // 3. Build the Main Question Query
             let query = supabase.from('questions').select('id');
 
-            // Apply Category Filters
             if (includedCats.length > 0) {
                 query = query.in('category', includedCats);
             } else if (excludedCats.length > 0) {
@@ -139,22 +121,15 @@ export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorP
                 query = query.in('category', remainingCats);
             }
 
-            // Apply Search
             if (searchTerm) {
                 query = query.or(`question_text.ilike.%${searchTerm}%,explanation.ilike.%${searchTerm}%`);
             }
 
-            // Apply Activity Logic
             if (unseenOnly) {
                 if (seenIds.length > 0) {
                     query = query.not('id', 'in', `(${seenIds.join(',')})`);
                 }
-            } else {
-                // If we are looking for specific ratings/mastery, we MUST be within targetIds
-                if (!targetIds || targetIds.length === 0) {
-                    throw new Error("No questions match your current average rating or mastery criteria.");
-                }
-                // Supabase .in() has a limit for long arrays, but for a few hundred IDs it works fine
+            } else if (targetIds) {
                 query = query.in('id', targetIds);
             }
 
@@ -165,11 +140,12 @@ export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorP
                 const shuffled = [...data].sort(() => 0.5 - Math.random());
                 onQuestionsFound(shuffled.slice(0, limit).map(q => q.id));
             } else {
-                setNoResults(true); // If category filters + rating filters together = 0
+                setNoResults(true); 
             }
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error(err);
-            alert(err.message || "An error occurred.");
+            const errorMessage = err instanceof Error ? err.message : "An error occurred.";
+            alert(errorMessage);
         } finally {
             setLoading(false);
         }
@@ -220,7 +196,6 @@ export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorP
                 </div>
             )}
 
-            {/* Other filters (Limit, Unseen, Search) remain here... */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
                 <input type="number" value={limit} onChange={(e) => setLimit(parseInt(e.target.value))} placeholder="Limit" style={{ padding: '10px', background: 'transparent', border: '1px solid #666', color: 'inherit', borderRadius: '8px' }} />
                 <div style={{ display: 'flex', alignItems: 'center', opacity: masteryFiltersActive ? 0.5 : 1 }}>
@@ -234,7 +209,6 @@ export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorP
                             setUnseenOnly(checked);
 
                             if (checked) {
-                                // Reset mastery filters when unseen is selected
                                 setNotMasteredOnly(false);
                                 setMinRating(1);
                                 setMaxRating(10);
@@ -258,7 +232,8 @@ export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorP
                     opacity: unseenOnly ? 0.5 : 1,
                     pointerEvents: unseenOnly ? 'none' : 'auto'
                 }}
-            >                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '0.9rem' }}>
+            >                
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '0.9rem' }}>
                     <span>Confidence Range: <strong>{minRating} - {maxRating}</strong></span>
                     <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', color: notMasteredOnly ? '#f87171' : 'inherit' }}>
                         <input
@@ -266,7 +241,7 @@ export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorP
                             checked={notMasteredOnly}
                             onChange={(e) => {
                                 setNotMasteredOnly(e.target.checked);
-                                if (e.target.checked) setUnseenOnly(false); // Auto-conflict resolution
+                                if (e.target.checked) setUnseenOnly(false);
                             }}
                             style={{ marginRight: '8px' }}
                         />
@@ -294,13 +269,12 @@ export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorP
                     />
                 </div>
                 <p style={{ fontSize: '0.7rem', color: '#888', marginTop: '8px', marginBottom: 0 }}>
-                    * Adjusting rating or mastery will automatically turn off "Unseen Only".
+                    * Adjusting rating or mastery will automatically turn off &quot;Unseen Only&quot;.
                 </p>
             </div>
 
-
-
             <input type="text" placeholder="Search phrase..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{ width: '100%', padding: '10px', background: 'transparent', border: '1px solid #666', color: 'inherit', borderRadius: '8px', marginBottom: '20px' }} />
+            
             {noResults && (
                 <div style={{
                     padding: '10px',

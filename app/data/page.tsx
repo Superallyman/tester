@@ -6,9 +6,42 @@ import { useSession } from "next-auth/react";
 
 type SortType = 'alpha' | 'worst' | 'best' | 'urgency' | 'mastery';
 
+// --- Interfaces for Type Safety ---
+interface CategoryStat {
+  name: string;
+  accuracy: number;
+  avgRating: number;
+  volume: number;
+  seenCount: number;
+  masteredCount: number;
+  totalInDb: number;
+  delusionScore: number;
+  urgency: number;
+}
+
+interface ChartPoint {
+  date: string;
+  acc: number;
+}
+
+interface AnalyticsStats {
+  total: number;
+  streak: number;
+  categories: CategoryStat[];
+  chartPoints: ChartPoint[];
+}
+
+interface UserActivityEntry {
+  is_correct: boolean;
+  user_rating: number;
+  attempted_at: string;
+  question_id: string;
+  questions: { category: string } | { category: string }[] | null;
+}
+
 export default function AnalyticsPage() {
   const { data: session, status } = useSession();
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<AnalyticsStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<SortType>('urgency');
   const [hoveredSort, setHoveredSort] = useState<SortType | null>(null);
@@ -25,20 +58,20 @@ export default function AnalyticsPage() {
     async function fetchEverything() {
       if (status === "loading" || !session?.user?.email) return;
 
-      // 1. Fetch TOTAL counts using the optimized SQL function
       const { data: countsData, error: countError } = await supabase
         .rpc('get_category_counts');
 
+      // Address 'countError' is assigned a value but never used
+      if (countError) {
+        console.error("Error fetching category counts:", countError);
+      }
+
       const totalPerCat: Record<string, number> = {};
       countsData?.forEach((item: { cat_name: string, q_count: number }) => {
-        // Normalize the name exactly as we do for activity
         const normalized = item.cat_name?.trim().replace(/\s+/g, ' ') || 'General';
         totalPerCat[normalized] = Number(item.q_count);
       });
 
-      // console.log("Full Verified DB Counts:", totalPerCat);
-
-      // 2. Fetch YOUR activity
       const { data: activity } = await supabase
         .from('user_activity')
         .select(`
@@ -48,16 +81,26 @@ export default function AnalyticsPage() {
         .eq('user_email', session.user.email)
         .order('attempted_at', { ascending: false });
 
-      if (activity) processAnalytics(activity, totalPerCat);
+      if (activity) {
+        // Cast the activity to our defined interface
+        processAnalytics(activity as unknown as UserActivityEntry[], totalPerCat);
+      }
       setLoading(false);
     }
     fetchEverything();
   }, [session, status]);
 
-  const processAnalytics = (data: any[], totalPerCat: Record<string, number>) => {
-    const categoryMap: Record<string, any> = {};
-    const daysSet = new Set();
-    const trendData: Record<string, { total: number, correct: number }> = {};
+  const processAnalytics = (data: UserActivityEntry[], totalPerCat: Record<string, number>) => {
+    const categoryMap: Record<string, { 
+      total: number; 
+      correct: number; 
+      sumRating: number; 
+      seenIds: Set<string>; 
+      masteredIds: Set<string>; 
+    }> = {};
+    
+    const daysSet = new Set<string>();
+    const trendData: Record<string, { total: number; correct: number }> = {};
 
     data.forEach(entry => {
       const rawCat = Array.isArray(entry.questions) ? entry.questions[0]?.category : entry.questions?.category;
@@ -66,7 +109,6 @@ export default function AnalyticsPage() {
       daysSet.add(new Date(entry.attempted_at).toDateString());
 
       if (!categoryMap[cat]) {
-        // ADD masteredIds Set here
         categoryMap[cat] = { total: 0, correct: 0, sumRating: 0, seenIds: new Set(), masteredIds: new Set() };
       }
 
@@ -74,7 +116,6 @@ export default function AnalyticsPage() {
       categoryMap[cat].sumRating += (entry.user_rating || 5);
       categoryMap[cat].seenIds.add(entry.question_id);
 
-      // TRACK MASTERY: If this attempt was correct, add it to masteredIds
       if (entry.is_correct) {
         categoryMap[cat].correct++;
         categoryMap[cat].masteredIds.add(entry.question_id);
@@ -86,22 +127,22 @@ export default function AnalyticsPage() {
     });
 
     let streak = 0;
-    let checkDate = new Date();
+    const checkDate = new Date(); // Using const as the variable isn't reassigned, the object is mutated
     while (daysSet.has(checkDate.toDateString())) {
       streak++;
       checkDate.setDate(checkDate.getDate() - 1);
     }
 
-    const chartPoints = Object.entries(trendData)
+    const chartPoints: ChartPoint[] = Object.entries(trendData)
       .map(([date, d]) => ({ date, acc: (d.correct / d.total) * 100 }))
       .slice(0, 7)
       .reverse();
 
-    const categories = Object.entries(categoryMap).map(([name, d]: [string, any]) => {
+    const categories: CategoryStat[] = Object.entries(categoryMap).map(([name, d]) => {
       const accuracy = (d.correct / d.total) * 100;
       const avgRating = d.sumRating / d.total;
       const seenCount = d.seenIds.size;
-      const masteredCount = d.masteredIds.size; // NEW METRIC
+      const masteredCount = d.masteredIds.size;
       const totalInDb = totalPerCat[name] || seenCount;
       const delusionScore = (avgRating * 10) - accuracy;
 
@@ -111,7 +152,7 @@ export default function AnalyticsPage() {
         avgRating,
         volume: d.total,
         seenCount,
-        masteredCount, // PASS TO UI
+        masteredCount,
         totalInDb,
         delusionScore,
         urgency: avgRating - (accuracy / 10)
@@ -121,7 +162,6 @@ export default function AnalyticsPage() {
     setStats({ total: data.length, streak, categories, chartPoints });
   };
 
-
   const getDelusionLabel = (score: number) => {
     if (score > 30) return { label: "Highly Delusional", color: "#ef4444" };
     if (score > 10) return { label: "Overconfident", color: "#f59e0b" };
@@ -129,7 +169,7 @@ export default function AnalyticsPage() {
     return { label: "Self-Aware", color: "#10b981" };
   };
 
-  const getSortedCategories = () => {
+  const getSortedCategories = (): CategoryStat[] => {
     if (!stats) return [];
     const cats = [...stats.categories];
     switch (sortBy) {
@@ -141,7 +181,7 @@ export default function AnalyticsPage() {
         return cats.sort((a, b) => {
           const masteryA = a.masteredCount / a.totalInDb;
           const masteryB = b.masteredCount / b.totalInDb;
-          return masteryB - masteryA; // Highest mastery at the top
+          return masteryB - masteryA;
         });
       default: return cats;
     }
@@ -152,7 +192,6 @@ export default function AnalyticsPage() {
 
   return (
     <main style={{ maxWidth: '900px', margin: '0 auto', padding: '2rem', fontFamily: 'sans-serif' }}>
-      {/* Header & Streak */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <h1>Performance & Insights</h1>
         <div style={{ padding: '8px 16px', borderRadius: '20px', border: '2px solid #f59e0b', color: '#f59e0b', fontWeight: 'bold' }}>
@@ -160,11 +199,10 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* 7-Day Trend Chart */}
       <section style={{ marginBottom: '3rem' }}>
         <h3 style={{ marginBottom: '1.5rem' }}>7-Day Accuracy Trend</h3>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: '15px', height: '180px', padding: '10px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', borderBottom: '2px solid #444' }}>
-          {stats.chartPoints.map((p: any) => (
+          {stats.chartPoints.map((p) => (
             <div key={p.date} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', height: '100%' }}>
               <span style={{ fontSize: '0.7rem', opacity: 0.8 }}>{p.acc.toFixed(0)}%</span>
               <div style={{ width: '100%', maxWidth: '40px', height: `${Math.max(p.acc, 4)}%`, background: p.acc > 0 ? '#0070f3' : '#444', borderRadius: '6px 6px 0 0', boxShadow: p.acc > 0 ? '0 0 15px rgba(0, 112, 243, 0.3)' : 'none' }} />
@@ -174,11 +212,9 @@ export default function AnalyticsPage() {
         </div>
       </section>
 
-      {/* Sorting Controls */}
       <div style={{ marginBottom: '2rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '10px', flexWrap: 'wrap', gap: '10px' }}>
           <h2 style={{ margin: 0 }}>Category Breakdown</h2>
-          {/* Sorting Controls */}
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             {(['urgency', 'mastery', 'worst', 'best', 'alpha'] as SortType[]).map(type => (
               <button
@@ -200,15 +236,15 @@ export default function AnalyticsPage() {
                 {type.charAt(0).toUpperCase() + type.slice(1)}
               </button>
             ))}
-          </div>        </div>
+          </div>
+        </div>
         <div style={{ minHeight: '20px', fontSize: '0.85rem', color: '#aaa', fontStyle: 'italic', paddingLeft: '5px', borderLeft: '2px solid #0070f3' }}>
           {hoveredSort ? sortExplanations[hoveredSort] : sortExplanations[sortBy]}
         </div>
       </div>
 
-      {/* Category Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '20px' }}>
-        {getSortedCategories().map((cat: any) => {
+        {getSortedCategories().map((cat) => {
           const delusion = getDelusionLabel(cat.delusionScore);
           return (
             <div key={cat.name} style={{ padding: '1.2rem', border: '1px solid #333', borderRadius: '12px', position: 'relative', background: 'rgba(128, 128, 128, 0.08)' }}>
@@ -221,27 +257,22 @@ export default function AnalyticsPage() {
                 <span style={{ fontWeight: 'bold', color: cat.accuracy > 75 ? '#10b981' : 'inherit' }}>{cat.accuracy.toFixed(0)}%</span>
               </div>
 
-              {/* Progress Bar (Accuracy) */}
               <div style={{ height: '8px', background: '#222', borderRadius: '4px', overflow: 'hidden', marginBottom: '12px' }}>
                 <div style={{ height: '100%', width: `${cat.accuracy}%`, background: cat.accuracy > 70 ? '#10b981' : cat.accuracy > 40 ? '#0070f3' : '#ef4444' }} />
               </div>
 
-              {/* Confidence & Coverage Row */}
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', opacity: 0.9, marginBottom: '4px' }}>
                 <span>Avg Confidence: <strong>{cat.avgRating.toFixed(1)}/10</strong></span>
                 <span>Seen: <strong>{cat.seenCount}/{cat.totalInDb}</strong></span>
               </div>
 
-              {/* Mastery Metric (Correct at least once) */}
               <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: '0.8rem', opacity: 0.9, marginBottom: '8px' }}>
                 <span style={{ color: cat.masteredCount === cat.totalInDb ? '#10b981' : 'inherit' }}>
                   Mastered: <strong>{cat.masteredCount}/{cat.totalInDb}</strong>
                 </span>
               </div>
 
-              {/* Database Penetration Bar (Now visually representing Mastery) */}
               <div style={{ height: '4px', background: '#222', borderRadius: '2px', overflow: 'hidden', marginBottom: '12px' }}>
-                {/* Seen Bar (Background/Lighter) */}
                 <div style={{ position: 'relative', height: '100%', width: '100%', background: '#333' }}>
                   <div style={{
                     position: 'absolute',
@@ -250,7 +281,6 @@ export default function AnalyticsPage() {
                     background: '#60a5fa',
                     opacity: 0.3
                   }} />
-                  {/* Mastered Bar (Foreground/Saturated) */}
                   <div style={{
                     position: 'absolute',
                     height: '100%',
@@ -261,7 +291,6 @@ export default function AnalyticsPage() {
                 </div>
               </div>
 
-              {/* Footer Info: Delusion Index & Labels */}
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginTop: '12px', paddingTop: '10px', borderTop: '1px solid #333' }}>
                 <span style={{ color: '#aaa' }}>{cat.volume} Total Attempts</span>
                 <span style={{ color: delusion.color, fontWeight: 'bold' }}>

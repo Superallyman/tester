@@ -1,6 +1,6 @@
 import NextAuth, { NextAuthOptions } from "next-auth";
 import GithubProvider from "next-auth/providers/github";
-import CredentialsProvider from "next-auth/providers/credentials"
+// import CredentialsProvider from "next-auth/providers/credentials"
 
 // Define the authOptions using the correct type
 const authOptions: NextAuthOptions = {
