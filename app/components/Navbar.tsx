@@ -35,7 +35,6 @@ function AuthButton() {
 }
 
 export default function Navbar() {
-  const pathname = usePathname();
 
   return (
     <nav className="flex items-center justify-between w-full px-6 py-4">
@@ -47,19 +46,26 @@ export default function Navbar() {
           className="dark:invert"
         />
       </Link>
-      {/* Hide Quick Test when on "/" */}
+      {/* Hide Quick Test when on "/"
       {pathname !== "/" && (
         <Link href="/">
           <p>Quick Test</p>
         </Link>
       )}
 
-      {/* Hide Performance Analytics when on "/data" */}
-      {pathname !== "/data" && (
+      {/* Hide Quick Test when on "/" */}
+        <Link href="/">
+          <p>Quick Test</p>
+        </Link>
+
         <Link href="/data">
           <p>Performance Analytics</p>
         </Link>
-      )}
+
+        <Link href="/history">
+          <p>History</p>
+        </Link>
+
 
 
       <AuthButton />

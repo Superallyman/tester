@@ -24,7 +24,7 @@ import { ThemeProvider } from "@/components/ui/theme-provider";
 // });
 
 export const metadata: Metadata = {
-  title: "Custom Tester 1.0",
+  title: "Custom Tester 2.0",
   description: "When you live hardcore, you are hardcore",
 };
 

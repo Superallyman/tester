@@ -1,12 +1,16 @@
 version: "3.9"
-
 services:
   next-tester:
-    build: .
+    build:
+      context: .
+      dockerfile: dockerfile
+      args:
+        - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+        - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
     image: next-tester
     container_name: next-tester
+    env_file:
+      - .env
     ports:
       - "3000:3000"
-    volumes:
-      - ./.env:/app/.env
     restart: unless-stopped

@@ -1,0 +1,17 @@
+To run the docker container you need to clone the respository and then run 
+
+You need to create and add a .env file
+
+docker-compose up -d
+
+
+If you need to reset a docker-build then you need to remove the docker image and container and rebuild it 
+
+Stop the container
+sudo docker-compose down
+
+This removes the container (named "next-tester)
+sudo docker-compose rm -f next-tester
+
+This rebuilds the container again
+sudo docker-compose up --build

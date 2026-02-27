@@ -3,9 +3,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/utils/supabase';
 import { useSession } from "next-auth/react";
-import { decode } from 'html-entities';
 
-// 1. Define a strict interface for the Question object
 interface Question {
     id: string;
     question_text: string;
@@ -21,15 +19,23 @@ interface QuizEngineProps {
 
 export default function QuizEngine({ questionIds }: QuizEngineProps) {
     const { data: session } = useSession();
-    // 2. Replace any[] with Question[]
     const [questions, setQuestions] = useState<Question[]>([]);
     const [userSelections, setUserSelections] = useState<Record<string, string[]>>({});
-    const [ratings, setRatings] = useState<Record<string, number>>({});
+    const [ratings, setRatings] = useState<Record<string, number | undefined>>({});
+    const [satisfaction, setSatisfaction] = useState<Record<string, number | undefined>>({});
+    const [activityIds, setActivityIds] = useState<Record<string, string>>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [hasSubmitted, setHasSubmitted] = useState(false);
-
     const [seconds, setSeconds] = useState(0);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Helper to decode HTML entities safely
+    const decodeHTML = (html: string) => {
+        if (typeof window === 'undefined') return html;
+        const txt = document.createElement("textarea");
+        txt.innerHTML = html;
+        return txt.value;
+    };
 
     const formatTime = (totalSeconds: number) => {
         const mins = Math.floor(totalSeconds / 60);
@@ -41,8 +47,7 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
         let correctCount = 0;
         questions.forEach(q => {
             const selected = userSelections[q.id] || [];
-            const isCorrect =
-                selected.length === q.correct_answers.length &&
+            const isCorrect = selected.length === q.correct_answers.length &&
                 selected.every(val => q.correct_answers.includes(val));
             if (isCorrect) correctCount++;
         });
@@ -55,45 +60,33 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
     useEffect(() => {
         async function fetchQuestions() {
             if (questionIds.length === 0) return;
-
-            const { data } = await supabase
-                .from('questions')
-                .select(`*`)
-                .in('id', questionIds);
-
+            const { data } = await supabase.from('questions').select(`*`).in('id', questionIds);
             if (data) {
                 const sortedData = questionIds
                     .map(id => data.find(q => q.id === id))
                     .filter((q): q is Question => !!q);
 
+                // Decode all fields before setting state
                 const decodedData = sortedData.map(q => ({
                     ...q,
-                    question_text: decode(q.question_text),
-                    options: q.options.map((opt: string) => decode(opt)),
-                    explanation: decode(q.explanation)
+                    question_text: decodeHTML(q.question_text),
+                    options: q.options.map((opt: string) => decodeHTML(opt)),
+                    explanation: decodeHTML(q.explanation)
                 }));
-                setQuestions(decodedData);
 
-                if (timerRef.current) clearInterval(timerRef.current);
-                timerRef.current = setInterval(() => {
-                    setSeconds(prev => prev + 1);
-                }, 1000);
+                setQuestions(decodedData);
+                timerRef.current = setInterval(() => setSeconds(prev => prev + 1), 1000);
             }
         }
         fetchQuestions();
-
-        return () => {
-            if (timerRef.current) clearInterval(timerRef.current);
-        };
+        return () => { if (timerRef.current) clearInterval(timerRef.current); };
     }, [questionIds]);
 
     const toggleOption = (qId: string, option: string) => {
         if (hasSubmitted) return;
         setUserSelections(prev => {
             const current = prev[qId] || [];
-            const next = current.includes(option)
-                ? current.filter(i => i !== option)
-                : [...current, option];
+            const next = current.includes(option) ? current.filter(i => i !== option) : [...current, option];
             return { ...prev, [qId]: next };
         });
     };
@@ -102,157 +95,194 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
         if (timerRef.current) clearInterval(timerRef.current);
         setIsSubmitting(true);
 
-        const activities = questions.map(q => {
-            const selected = userSelections[q.id] || [];
-            const isCorrect =
-                selected.length === q.correct_answers.length &&
-                selected.every(val => q.correct_answers.includes(val));
+        const activitiesToInsert = questions
+            .filter(q => ratings[q.id] !== undefined)
+            .map(q => {
+                const selected = userSelections[q.id] || [];
+                const isCorrect = selected.length === q.correct_answers.length &&
+                    selected.every(val => q.correct_answers.includes(val));
+                return {
+                    question_id: q.id,
+                    is_correct: isCorrect,
+                    user_rating: ratings[q.id],
+                    satisfaction_rating: ratings[q.id],
+                    user_email: session?.user?.email || "anonymous",
+                    submitted_answer: selected,
+                };
+            });
 
-            return {
-                question_id: q.id,
-                is_correct: isCorrect,
-                user_rating: ratings[q.id] || 5,
-                user_email: session?.user?.email || "anonymous",
-            };
-        });
-
-        const { error } = await supabase.from('user_activity').insert(activities);
-        if (!error) setHasSubmitted(true);
+        if (activitiesToInsert.length > 0) {
+            const { data, error } = await supabase.from('user_activity').insert(activitiesToInsert).select('id, question_id');
+            if (!error && data) {
+                const idMap: Record<string, string> = {};
+                const satMap: Record<string, number> = {};
+                data.forEach(row => {
+                    idMap[row.question_id] = row.id;
+                    satMap[row.question_id] = ratings[row.question_id] as number;
+                });
+                setActivityIds(idMap);
+                setSatisfaction(satMap);
+            }
+        }
+        setHasSubmitted(true);
         setIsSubmitting(false);
     };
 
-    // 3. Explicitly type the helper function
+    const handleSatisfactionUpdate = async (qId: string, score: number | undefined) => {
+        setSatisfaction(prev => ({ ...prev, [qId]: score }));
+        const dbId = activityIds[qId];
+
+        if (dbId && score === undefined) {
+            const { error } = await supabase.from('user_activity').delete().eq('id', dbId);
+            if (!error) {
+                setActivityIds(prev => {
+                    const next = { ...prev };
+                    delete next[qId];
+                    return next;
+                });
+            }
+            return;
+        }
+
+        if (!dbId && score !== undefined) {
+            const selected = userSelections[qId] || [];
+            const q = questions.find(item => item.id === qId)!;
+            const isCorrect = selected.length === q.correct_answers.length &&
+                selected.every(val => q.correct_answers.includes(val));
+
+            const { data, error } = await supabase.from('user_activity').insert({
+                question_id: qId,
+                is_correct: isCorrect,
+                user_rating: score,
+                satisfaction_rating: score,
+                user_email: session?.user?.email || "anonymous",
+                submitted_answer: selected,
+            }).select('id').single();
+
+            if (!error && data) {
+                setActivityIds(prev => ({ ...prev, [qId]: data.id }));
+            }
+            return;
+        }
+
+        if (dbId && score !== undefined) {
+            await supabase.from('user_activity').update({ satisfaction_rating: score }).eq('id', dbId);
+        }
+    };
+
+    const RatingPicker = ({ current, onSelect, label }: any) => (
+        <div style={{ marginTop: '15px' }}>
+            <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '8px' }}>{label}</label>
+            <div style={{ display: 'flex', gap: '8px' }}>
+                {[1, 2, 3, 4].map(num => (
+                    <button
+                        key={num}
+                        onClick={() => onSelect(current === num ? undefined : num)}
+                        style={{
+                            flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #444',
+                            cursor: 'pointer',
+                            background: current === num ? '#0070f3' : 'transparent',
+                            transition: 'all 0.2s', fontSize: '0.8rem'
+                        }}
+                    >
+                        {num}
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+
     const getOptionStyle = (q: Question, opt: string): React.CSSProperties => {
         const selected = userSelections[q.id] || [];
         const isSelected = selected.includes(opt);
+        if (!hasSubmitted) return { backgroundColor: isSelected ? '#444' : 'transparent', border: '1px solid #444' };
         const isCorrect = q.correct_answers.includes(opt);
-
-        if (!hasSubmitted) {
-            return {
-                backgroundColor: isSelected ? 'rgba(128, 128, 128, 0.5)' : 'transparent',
-                color: 'inherit',
-                border: '1px solid #ccc'
-            };
-        }
-
-        if (isSelected && isCorrect) return { backgroundColor: '#c6f6d5', color: '#22543d', border: '2px solid green' };
-        if (isSelected && !isCorrect) return { backgroundColor: '#fed7d7', color: '#822727', border: '2px solid red' };
-        if (!isSelected && isCorrect) return { backgroundColor: '#bee3f8', color: '#2a4365', border: '2px solid blue' };
-
-        return { backgroundColor: 'transparent', color: '#a0aec0', border: '1px solid #444', opacity: 0.6 };
+        if (isSelected && isCorrect) return { backgroundColor: '#10b98133', border: '1px solid #10b981', color: '#10b981' };
+        if (isSelected && !isCorrect) return { backgroundColor: '#ef444433', border: '1px solid #ef4444', color: '#ef4444' };
+        if (!isSelected && isCorrect) return { backgroundColor: '#3b82f633', border: '1px solid #3b82f6', color: '#3b82f6' };
+        return { opacity: 0.5, border: '1px solid #222' };
     };
 
-    if (questions.length === 0) return <p>Loading questions...</p>;
-
     return (
-        <div>
-            <div style={{ textAlign: 'right', marginBottom: '1rem', fontSize: '1.2rem', fontWeight: 'bold' }}>
-                ⏱️ {formatTime(seconds)}
-            </div>
+        <div style={{ color: 'inherit' }}>
+            <div style={{ textAlign: 'right', marginBottom: '1rem', fontWeight: 'bold', opacity: 0.8 }}>⏱️ {formatTime(seconds)}</div>
 
             {hasSubmitted && (
-                <div style={{ padding: '1.5rem', borderRadius: '12px', border: '2px solid #0070f3', marginBottom: '2rem', textAlign: 'center' }}>
+                <div style={{ padding: '1.5rem', borderRadius: '12px', border: '2px solid #0070f3', marginBottom: '2rem', textAlign: 'center', background: 'rgba(128,128,128,0.05)' }}>
                     <h2 style={{ margin: 0 }}>Quiz Complete!</h2>
-                    <p style={{ fontSize: '1.2rem', margin: '10px 0' }}>
-                        You scored <strong>{score}</strong> out of <strong>{questions.length}</strong> ({percentage.toFixed(1)}%) in {formatTime(seconds)}.
+                    <p style={{ fontSize: '1.1rem', margin: '10px 0' }}>
+                        You scored <strong>{score}</strong>/<strong>{questions.length}</strong> ({percentage.toFixed(1)}%)
                     </p>
-                    <div style={{ background: '#e2e8f0', height: '12px', borderRadius: '10px', overflow: 'hidden' }}>
-                        <div style={{ background: '#0070f3', height: '100%', width: `${percentage}%`, transition: 'width 1s ease-in-out' }} />
+                    <div style={{ background: 'rgba(128,128,128,0.2)', height: '8px', borderRadius: '10px', overflow: 'hidden' }}>
+                        <div style={{ background: '#0070f3', height: '100%', width: `${percentage}%`, transition: 'width 1s' }} />
                     </div>
                 </div>
             )}
 
-            {questions.map((q, idx) => (
-                <div key={q.id} style={{ marginBottom: '3rem', padding: '1.5rem', border: '1px solid #eee', borderRadius: '12px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <h3>{idx + 1}. {q.question_text}</h3>
-                        {hasSubmitted && (
-                            <span style={{ 
-                                fontWeight: 'bold', 
-                                color: (userSelections[q.id]?.every(v => q.correct_answers.includes(v)) && userSelections[q.id]?.length === q.correct_answers.length) ? 'green' : 'red' 
-                            }}>
-                                {(userSelections[q.id]?.every(v => q.correct_answers.includes(v)) && userSelections[q.id]?.length === q.correct_answers.length) ? 'CORRECT' : 'INCORRECT'}
-                            </span>
-                        )}
-                    </div>
+            {questions.map((q, idx) => {
+                const isTracked = hasSubmitted ? !!activityIds[q.id] : ratings[q.id] !== undefined;
+                const selected = userSelections[q.id] || [];
+                const isCorrect = selected.length === q.correct_answers.length && selected.every(val => q.correct_answers.includes(val));
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        {q.options.map((opt: string, optIdx: number) => (
-                            <button
-                                key={`${q.id}-opt-${optIdx}`}
-                                onClick={() => toggleOption(q.id, opt)}
-                                disabled={hasSubmitted}
-                                style={{
-                                    padding: '12px', textAlign: 'left', borderRadius: '6px',
-                                    cursor: hasSubmitted ? 'default' : 'pointer',
-                                    ...getOptionStyle(q, opt)
-                                }}
-                            >
-                                {opt}
-                            </button>
-                        ))}
-                    </div>
-
-                    {hasSubmitted && (
-                        <div style={{ marginTop: '15px', padding: '15px', borderRadius: '6px', fontSize: '0.9rem', borderLeft: '4px solid #0070f3' }}>
-                            <h3>Category: {q.category}</h3>
-                            <strong>Why?</strong> {q.explanation}
+                return (
+                    <div key={q.id} style={{ marginBottom: '2rem', padding: '1.5rem', background: 'rgba(128,128,128,0.05)', borderRadius: '12px', border: '1px solid rgba(128,128,128,0.2)', position: 'relative' }}>
+                        <div key={q.id} style={{ marginBottom: '1rem', padding: '0.5rem' }}>
+                            {hasSubmitted && (
+                                <span style={{ fontSize: '1.0rem', fontWeight: 'bold', color: isCorrect ? '#10b981' : '#ef4444' }}>
+                                    {isCorrect ? 'CORRECT' : 'INCORRECT'}
+                                </span>
+                            )}
                         </div>
-                    )}
 
-                    {!hasSubmitted && (
-                        <div style={{ marginTop: '15px', position: 'relative' }}>
-                            <div style={{ position: 'relative', width: '100%' }}>
-                                <input
-                                    type="range"
-                                    min="1"
-                                    max="10"
-                                    value={ratings[q.id] || 5}
-                                    onChange={(e) =>
-                                        setRatings({ ...ratings, [q.id]: parseInt(e.target.value) })
-                                    }
-                                    style={{ width: '100%' }}
-                                />
-                                <label style={{ fontSize: '0.6rem', display: 'block' }}>
-                                    Rate your confidence level (1=easy to 10=hard af):
-                                </label>
+                        <h3 style={{ marginTop: 0, lineHeight: 1.4 }}>{idx + 1}. {q.question_text}</h3>
 
-                                <div
-                                    style={{
-                                        position: 'absolute',
-                                        top: '-25px',
-                                        left: `calc(${((ratings[q.id] || 5) - 1) * 10}% - 10px)`,
-                                        background: '#000',
-                                        color: '#fff',
-                                        padding: '2px 6px',
-                                        borderRadius: '4px',
-                                        fontSize: '0.75rem'
-                                    }}
-                                >
-                                    {ratings[q.id] || 5}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '15px' }}>
+                            {q.options.map((opt, optIdx) => (
+                                <button key={optIdx} onClick={() => toggleOption(q.id, opt)} disabled={hasSubmitted}
+                                    style={{ padding: '12px', textAlign: 'left', borderRadius: '8px', color: 'inherit', cursor: hasSubmitted ? 'default' : 'pointer', ...getOptionStyle(q, opt) }}>
+                                    {opt}
+                                </button>
+                            ))}
+                        </div>
+
+                        {hasSubmitted && (
+                            <div style={{ marginTop: '20px', borderTop: '1px solid rgba(128,128,128,0.2)', paddingTop: '15px' }}>
+                                <div style={{
+                                    background: 'rgba(59, 130, 246, 0.1)',
+                                    padding: '12px',
+                                    borderRadius: '8px',
+                                    fontSize: '0.9rem',
+                                    marginBottom: '15px',
+                                    borderLeft: '4px solid #3b82f6',
+                                    whiteSpace: 'pre-wrap' // Preserves formatting from decoded entities
+                                }}>
+                                    <strong style={{ color: '#3b82f6' }}>Explanation:</strong> {q.explanation}
                                 </div>
                             </div>
-                        </div>
-                    )}
-                </div>
-            ))}
+                        )}
 
-            {!hasSubmitted ? (
-                <button
-                    onClick={handleAllSubmit}
-                    disabled={isSubmitting}
-                    style={{ width: '100%', padding: '15px', background: '#0070f3', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
-                >
-                    {isSubmitting ? "Submitting..." : "Submit All Answers"}
-                </button>
-            ) : (
-                <button
-                    onClick={() => window.location.reload()}
-                    style={{ width: '100%', padding: '15px', borderRadius: '8px', background: '#10b981', color: '#fff', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}
-                >
-                    Take Another Quiz
-                </button>
-            )}
+
+                        <RatingPicker
+                            label={hasSubmitted ? "Update Satisfaction (1-4)" : "Confidence Level (1-4)"}
+                            current={hasSubmitted ? satisfaction[q.id] : ratings[q.id]}
+                            onSelect={(val: number | undefined) => hasSubmitted ? handleSatisfactionUpdate(q.id, val) : setRatings({ ...ratings, [q.id]: val })}
+                        />
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '10px', marginTop: '12px' }}>
+                            {!isTracked ? (
+                                <span style={{ fontSize: '0.6rem', opacity: 0.5, border: '1px solid rgba(128,128,128,0.3)', padding: '1px 6px', borderRadius: '3px', letterSpacing: '0.03rem' }}>NOT TRACKED</span>
+                            ) : (
+                                <span style={{ fontSize: '0.6rem', color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid #10b981', padding: '1px 6px', borderRadius: '3px' }}>✓ SAVED</span>
+                            )}
+                        </div>
+                    </div>
+                );
+            })}
+
+            <button onClick={hasSubmitted ? () => window.location.reload() : handleAllSubmit} disabled={isSubmitting}
+                style={{ width: '100%', padding: '15px', background: hasSubmitted ? '#10b981' : '#0070f3', color: 'white', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer', transition: 'filter 0.2s' }}>
+                {isSubmitting ? "Submitting..." : hasSubmitted ? "Take Another Quiz" : "Submit All Answers"}
+            </button>
         </div>
     );
 }

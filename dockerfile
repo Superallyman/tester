@@ -1,14 +1,12 @@
 FROM node:18-alpine
-
 WORKDIR /app
-
 COPY package*.json ./
 RUN npm install
-
 COPY . .
-
-RUN npm run build  # This is the crucial missing step
-
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
+RUN npm run build
 EXPOSE 3000
-
-CMD ["npm", "run", "start"] # Or "next start" if you prefer
+CMD ["npm", "run", "start"]
