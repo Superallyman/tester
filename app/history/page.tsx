@@ -23,6 +23,10 @@ interface HistoryItem {
 
 const PAGE_SIZE = 100;
 
+// Define the specific types for our filters to avoid 'any'
+type StatusFilter = 'all' | 'correct' | 'incorrect';
+type SortOrder = 'newest' | 'oldest' | 'confidence' | 'satisfaction';
+
 export default function HistoryPage() {
     const { data: session } = useSession();
     
@@ -33,9 +37,9 @@ export default function HistoryPage() {
     const [hasMore, setHasMore] = useState(true);
 
     // Filter States
-    const [statusFilter, setStatusFilter] = useState<'all' | 'correct' | 'incorrect'>('all');
+    const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
     const [satFilter, setSatFilter] = useState<number | 'all'>('all');
-    const [sortOrder, setSortOrder] = useState<'newest' | 'oldest' | 'confidence' | 'satisfaction'>('newest');
+    const [sortOrder, setSortOrder] = useState<SortOrder>('newest');
     const [selectedCats, setSelectedCats] = useState<string[]>([]);
     
     // UI States
@@ -104,9 +108,10 @@ export default function HistoryPage() {
         setLoading(false);
     }, [session, statusFilter, satFilter, sortOrder, selectedCats, page]);
 
+    // Fixed Warning: Added fetchHistory to dependencies
     useEffect(() => {
         fetchHistory(true);
-    }, [statusFilter, satFilter, sortOrder, selectedCats]);
+    }, [fetchHistory]);
 
     const handleUpdateSatisfaction = async (id: string, score: number) => {
         const currentItem = history.find(i => i.id === id);
@@ -130,7 +135,11 @@ export default function HistoryPage() {
             <div style={{ background: 'rgba(128,128,128,0.05)', padding: '20px', borderRadius: '12px', marginBottom: '2rem', border: '1px solid rgba(128,128,128,0.2)', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '15px' }}>
                 <div>
                     <label style={{ display: 'block', fontSize: '0.65rem', opacity: 0.6, marginBottom: '5px', fontWeight: 'bold' }}>STATUS</label>
-                    <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)} style={{ width: '100%', padding: '10px', background: 'rgba(128,128,128,0.1)', color: 'inherit', border: '1px solid rgba(128,128,128,0.2)', borderRadius: '8px' }}>
+                    <select 
+                        value={statusFilter} 
+                        onChange={(e) => setStatusFilter(e.target.value as StatusFilter)} 
+                        style={{ width: '100%', padding: '10px', background: 'rgba(128,128,128,0.1)', color: 'inherit', border: '1px solid rgba(128,128,128,0.2)', borderRadius: '8px' }}
+                    >
                         <option value="all">All Results</option>
                         <option value="correct">Correct</option>
                         <option value="incorrect">Incorrect</option>
@@ -150,7 +159,11 @@ export default function HistoryPage() {
 
                 <div>
                     <label style={{ display: 'block', fontSize: '0.65rem', opacity: 0.6, marginBottom: '5px', fontWeight: 'bold' }}>SORT ORDER</label>
-                    <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value as any)} style={{ width: '100%', padding: '10px', background: 'rgba(128,128,128,0.1)', color: 'inherit', border: '1px solid rgba(128,128,128,0.2)', borderRadius: '8px' }}>
+                    <select 
+                        value={sortOrder} 
+                        onChange={(e) => setSortOrder(e.target.value as SortOrder)} 
+                        style={{ width: '100%', padding: '10px', background: 'rgba(128,128,128,0.1)', color: 'inherit', border: '1px solid rgba(128,128,128,0.2)', borderRadius: '8px' }}
+                    >
                         <option value="newest">Newest</option>
                         <option value="oldest">Oldest</option>
                         <option value="confidence">Confidence</option>
@@ -243,7 +256,7 @@ export default function HistoryPage() {
                             padding: '14px', 
                             borderRadius: '8px', 
                             border: '1px solid rgba(128,128,128,0.1)',
-                            whiteSpace: 'pre-wrap' // KEY: This preserves the newlines from &#10;
+                            whiteSpace: 'pre-wrap'
                         }}>
                             <strong style={{ color: '#3b82f6', display: 'block', marginBottom: '8px', fontSize: '0.75rem', letterSpacing: '0.05em' }}>EXPLANATION:</strong> 
                             {decodeHTML(item.questions.explanation)}

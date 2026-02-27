@@ -19,6 +19,11 @@ interface QuestionStat {
     mastered: boolean;
 }
 
+// Fixed the "any" error by defining the expected RPC return shape
+interface SearchResult {
+    id: string;
+}
+
 export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorProps) {
     const { data: session } = useSession();
     const [availableCategories, setAvailableCategories] = useState<string[]>([]);
@@ -41,7 +46,6 @@ export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorP
     const hasCategoryFilters = includedCats.length > 0 || excludedCats.length > 0;
     const hasPhraseFilters = searchedPhrases.length > 0;
 
-    // Logic for calculating the Intersection (AND) or Union (OR)
     const currentPoolIds = useMemo(() => {
         if (searchedPhrases.length === 0) return [];
         if (searchMode === 'OR') {
@@ -90,14 +94,14 @@ export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorP
             for (const phrase of phrasesToAdd) {
                 if (newChips.find(c => c.phrase.toLowerCase() === phrase.toLowerCase())) continue;
     
-                // Use the RPC call to our custom search function
                 const { data, error } = await supabase
                     .rpc('search_questions_by_phrase', { search_term: phrase });
     
                 if (error) throw error;
                 
-                // Map the returned questions to just their IDs
-                newChips.push({ phrase, ids: data?.map((q: any) => q.id) || [] });
+                // Explicitly typing the map function to satisfy TypeScript
+                const foundIds = (data as SearchResult[])?.map((q) => q.id) || [];
+                newChips.push({ phrase, ids: foundIds });
             }
             setSearchedPhrases(newChips);
             setSearchTerm('');
@@ -160,7 +164,11 @@ export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorP
             } else {
                 setNoResults(true);
             }
-        } catch (err) { console.error(err); } finally { setLoading(false); }
+        } catch (err) { 
+            console.error(err); 
+        } finally { 
+            setLoading(false); 
+        }
     };
 
     return (
@@ -173,7 +181,6 @@ export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorP
                 </div>
             )}
 
-            {/* Category Filter Section */}
             <div style={{ marginBottom: '8px', opacity: hasPhraseFilters ? 0.4 : 1, pointerEvents: hasPhraseFilters ? 'none' : 'auto', transition: 'opacity 0.3s' }}>
                 <button onClick={() => setShowCategories(!showCategories)} style={{ width: '100%', display: 'flex', justifyContent: 'space-between', padding: '12px', background: 'rgba(128,128,128,0.1)', border: '1px solid rgba(128,128,128,0.2)', borderRadius: '8px', color: 'inherit', cursor: 'pointer' }}>
                     <span>{showCategories ? '▼' : '▶'} {hasPhraseFilters ? 'Categories (Disabled)' : 'Filter by Category'}</span>
@@ -198,7 +205,6 @@ export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorP
                 )}
             </div>
 
-            {/* Phrase Search Section */}
             <div style={{ marginBottom: '20px', opacity: hasCategoryFilters ? 0.4 : 1, pointerEvents: hasCategoryFilters ? 'none' : 'auto', transition: 'opacity 0.3s' }}>
                 <button onClick={() => setShowPhrases(!showPhrases)} style={{ width: '100%', display: 'flex', justifyContent: 'space-between', padding: '12px', background: 'rgba(128,128,128,0.1)', border: '1px solid rgba(128,128,128,0.2)', borderRadius: '8px', color: 'inherit', cursor: 'pointer' }}>
                     <span>{showPhrases ? '▼' : '▶'} {hasCategoryFilters ? 'Search Phrases (Disabled)' : 'Search Phrases'}</span>
@@ -234,7 +240,6 @@ export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorP
                 )}
             </div>
 
-            {/* Standard Quiz Settings */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <label style={{ fontSize: '0.65rem', opacity: 0.6, marginLeft: '4px' }}>QUESTION LIMIT</label>

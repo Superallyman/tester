@@ -17,6 +17,13 @@ interface QuizEngineProps {
     questionIds: string[];
 }
 
+// Fixed Error: Specified the type for RatingPicker props
+interface RatingPickerProps {
+    current: number | undefined;
+    onSelect: (val: number | undefined) => void;
+    label: string;
+}
+
 export default function QuizEngine({ questionIds }: QuizEngineProps) {
     const { data: session } = useSession();
     const [questions, setQuestions] = useState<Question[]>([]);
@@ -27,7 +34,7 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [hasSubmitted, setHasSubmitted] = useState(false);
     const [seconds, setSeconds] = useState(0);
-    const timerRef = useRef<NodeJS.Timeout | null>(null);
+    const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     // Helper to decode HTML entities safely
     const decodeHTML = (html: string) => {
@@ -66,7 +73,6 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
                     .map(id => data.find(q => q.id === id))
                     .filter((q): q is Question => !!q);
 
-                // Decode all fields before setting state
                 const decodedData = sortedData.map(q => ({
                     ...q,
                     question_text: decodeHTML(q.question_text),
@@ -128,11 +134,11 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
         setIsSubmitting(false);
     };
 
-    const handleSatisfactionUpdate = async (qId: string, score: number | undefined) => {
-        setSatisfaction(prev => ({ ...prev, [qId]: score }));
+    const handleSatisfactionUpdate = async (qId: string, scoreVal: number | undefined) => {
+        setSatisfaction(prev => ({ ...prev, [qId]: scoreVal }));
         const dbId = activityIds[qId];
 
-        if (dbId && score === undefined) {
+        if (dbId && scoreVal === undefined) {
             const { error } = await supabase.from('user_activity').delete().eq('id', dbId);
             if (!error) {
                 setActivityIds(prev => {
@@ -144,7 +150,7 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
             return;
         }
 
-        if (!dbId && score !== undefined) {
+        if (!dbId && scoreVal !== undefined) {
             const selected = userSelections[qId] || [];
             const q = questions.find(item => item.id === qId)!;
             const isCorrect = selected.length === q.correct_answers.length &&
@@ -153,8 +159,8 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
             const { data, error } = await supabase.from('user_activity').insert({
                 question_id: qId,
                 is_correct: isCorrect,
-                user_rating: score,
-                satisfaction_rating: score,
+                user_rating: scoreVal,
+                satisfaction_rating: scoreVal,
                 user_email: session?.user?.email || "anonymous",
                 submitted_answer: selected,
             }).select('id').single();
@@ -165,12 +171,12 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
             return;
         }
 
-        if (dbId && score !== undefined) {
-            await supabase.from('user_activity').update({ satisfaction_rating: score }).eq('id', dbId);
+        if (dbId && scoreVal !== undefined) {
+            await supabase.from('user_activity').update({ satisfaction_rating: scoreVal }).eq('id', dbId);
         }
     };
 
-    const RatingPicker = ({ current, onSelect, label }: any) => (
+    const RatingPicker = ({ current, onSelect, label }: RatingPickerProps) => (
         <div style={{ marginTop: '15px' }}>
             <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '8px' }}>{label}</label>
             <div style={{ display: 'flex', gap: '8px' }}>
@@ -182,7 +188,7 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
                             flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #444',
                             cursor: 'pointer',
                             background: current === num ? '#0070f3' : 'transparent',
-                            transition: 'all 0.2s', fontSize: '0.8rem'
+                            transition: 'all 0.2s', fontSize: '0.8rem', color: 'inherit'
                         }}
                     >
                         {num}
@@ -226,7 +232,7 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
 
                 return (
                     <div key={q.id} style={{ marginBottom: '2rem', padding: '1.5rem', background: 'rgba(128,128,128,0.05)', borderRadius: '12px', border: '1px solid rgba(128,128,128,0.2)', position: 'relative' }}>
-                        <div key={q.id} style={{ marginBottom: '1rem', padding: '0.5rem' }}>
+                        <div style={{ marginBottom: '1rem', padding: '0.5rem' }}>
                             {hasSubmitted && (
                                 <span style={{ fontSize: '1.0rem', fontWeight: 'bold', color: isCorrect ? '#10b981' : '#ef4444' }}>
                                     {isCorrect ? 'CORRECT' : 'INCORRECT'}
@@ -254,13 +260,12 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
                                     fontSize: '0.9rem',
                                     marginBottom: '15px',
                                     borderLeft: '4px solid #3b82f6',
-                                    whiteSpace: 'pre-wrap' // Preserves formatting from decoded entities
+                                    whiteSpace: 'pre-wrap'
                                 }}>
                                     <strong style={{ color: '#3b82f6' }}>Explanation:</strong> {q.explanation}
                                 </div>
                             </div>
                         )}
-
 
                         <RatingPicker
                             label={hasSubmitted ? "Update Satisfaction (1-4)" : "Confidence Level (1-4)"}

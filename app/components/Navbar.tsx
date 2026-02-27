@@ -9,7 +9,7 @@ import Image from "next/image";
 import Logo from "../../public/eye.svg";
 import { ModeToggle } from "./ui/toggle-mode";
 
-import { usePathname } from "next/navigation";
+// import { usePathname } from "next/navigation";
 
 
 //auth stuff
