@@ -4,6 +4,8 @@ import React, { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/utils/supabase';
 import { useSession } from "next-auth/react";
 
+import { smartClean } from '@/utils/formatters';
+
 interface Question {
     id: string;
     question_text: string;
@@ -37,12 +39,12 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     // Helper to decode HTML entities safely
-    const decodeHTML = (html: string) => {
-        if (typeof window === 'undefined') return html;
-        const txt = document.createElement("textarea");
-        txt.innerHTML = html;
-        return txt.value;
-    };
+    // const decodeHTML = (html: string) => {
+    //     if (typeof window === 'undefined') return html;
+    //     const txt = document.createElement("textarea");
+    //     txt.innerHTML = html;
+    //     return txt.value;
+    // };
 
     const formatTime = (totalSeconds: number) => {
         const mins = Math.floor(totalSeconds / 60);
@@ -75,9 +77,10 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
 
                 const decodedData = sortedData.map(q => ({
                     ...q,
-                    question_text: decodeHTML(q.question_text),
-                    options: q.options.map((opt: string) => decodeHTML(opt)),
-                    explanation: decodeHTML(q.explanation)
+                    question_text: smartClean(q.question_text),
+                    options: q.options.map((opt: string) => smartClean(opt)),
+                    correct_answers: q.correct_answers.map((ans: string) => smartClean(ans)),
+                    explanation: smartClean(q.explanation)
                 }));
 
                 setQuestions(decodedData);
