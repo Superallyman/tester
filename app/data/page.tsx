@@ -248,7 +248,8 @@ export default function AnalyticsPage() {
             <span style={{ fontSize: '0.85rem', color: '#aaa', display: 'block', marginBottom: '6px' }}>Total Practice Volume</span>
             <div style={{ fontSize: '1.8rem', fontWeight: 'bold' }}>{stats.total}</div>
             <span style={{ fontSize: '0.75rem', color: '#888' }}>
-              {stats.categories.reduce((acc, cat) => acc + cat.seenCount, 0)} unique questions seen
+              {stats.categories.reduce((acc, cat) => acc + cat.seenCount, 0)} out of {' '}
+              {stats.categories.reduce((acc, cat) => acc + cat.totalInDb, 0)} total unique questions
             </span>
           </div>
 
