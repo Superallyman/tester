@@ -10,7 +10,7 @@ type SortType = 'alpha' | 'worst' | 'best' | 'urgency' | 'mastery' | 'frustratio
 interface CategoryStat {
   name: string;
   accuracy: number;
-  avgRating: number;      
+  avgRating: number;
   avgSatisfaction: number;
   volume: number;
   seenCount: number;
@@ -18,7 +18,7 @@ interface CategoryStat {
   totalInDb: number;
   delusionScore: number;
   urgency: number;
-  lastAttempted: string; // Added field
+  lastAttempted: string;
 }
 
 interface ChartPoint {
@@ -28,6 +28,8 @@ interface ChartPoint {
 
 interface AnalyticsStats {
   total: number;
+  totalCorrect: number;
+  overallAccuracy: number;
   streak: number;
   categories: CategoryStat[];
   chartPoints: ChartPoint[];
@@ -35,8 +37,8 @@ interface AnalyticsStats {
 
 interface UserActivityEntry {
   is_correct: boolean;
-  user_rating: number;         
-  satisfaction_rating: number | null; 
+  user_rating: number;
+  satisfaction_rating: number | null;
   attempted_at: string;
   question_id: string;
   questions: { category: string } | { category: string }[] | null;
@@ -50,7 +52,7 @@ interface CategoryMapEntry {
   satCount: number;
   seenIds: Set<string>;
   masteredIds: Set<string>;
-  latestTimestamp: number; // Added to track most recent activity
+  latestTimestamp: number;
 }
 
 export default function AnalyticsPage() {
@@ -70,7 +72,6 @@ export default function AnalyticsPage() {
     frustration: "Lowest satisfaction scores. Subjects that are annoying or confusing."
   };
 
-  // Helper for human-readable dates
   const formatTimeAgo = (dateString: string) => {
     const now = new Date();
     const past = new Date(dateString);
@@ -88,18 +89,22 @@ export default function AnalyticsPage() {
     const daysSet = new Set<string>();
     const trendData: Record<string, { total: number; correct: number; timestamp: number }> = {};
 
+    let totalCorrect = 0;
+
     data.forEach(entry => {
+      if (entry.is_correct) totalCorrect++;
+
       const rawCat = Array.isArray(entry.questions) ? entry.questions[0]?.category : entry.questions?.category;
       const cat = rawCat?.trim() || 'General';
-      
+
       const dateObj = new Date(entry.attempted_at);
       const timestamp = dateObj.getTime();
       const dateKey = dateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
       daysSet.add(dateObj.toDateString());
 
       if (!categoryMap[cat]) {
-        categoryMap[cat] = { 
-          total: 0, correct: 0, sumRating: 0, sumSatisfaction: 0, 
+        categoryMap[cat] = {
+          total: 0, correct: 0, sumRating: 0, sumSatisfaction: 0,
           satCount: 0, seenIds: new Set(), masteredIds: new Set(),
           latestTimestamp: 0
         };
@@ -107,8 +112,7 @@ export default function AnalyticsPage() {
 
       categoryMap[cat].total++;
       categoryMap[cat].sumRating += (entry.user_rating || 0);
-      
-      // Track the latest attempt
+
       if (timestamp > categoryMap[cat].latestTimestamp) {
         categoryMap[cat].latestTimestamp = timestamp;
       }
@@ -158,7 +162,10 @@ export default function AnalyticsPage() {
       .reverse()
       .map(([date, d]) => ({ date, acc: (d.correct / d.total) * 100 }));
 
-    setStats({ total: data.length, streak, categories, chartPoints });
+    const total = data.length;
+    const overallAccuracy = total > 0 ? (totalCorrect / total) * 100 : 0;
+
+    setStats({ total, totalCorrect, overallAccuracy, streak, categories, chartPoints });
   };
 
   useEffect(() => {
@@ -195,8 +202,8 @@ export default function AnalyticsPage() {
 
   const filteredAndSortedCategories = useMemo(() => {
     if (!stats) return [];
-    
-    const result = stats.categories.filter(cat => 
+
+    const result = stats.categories.filter(cat =>
       cat.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
@@ -208,7 +215,7 @@ export default function AnalyticsPage() {
       case 'frustration': result.sort((a, b) => a.avgSatisfaction - b.avgSatisfaction); break;
       case 'mastery': result.sort((a, b) => (b.masteredCount / b.totalInDb) - (a.masteredCount / a.totalInDb)); break;
     }
-    
+
     return result;
   }, [stats, sortBy, searchTerm]);
 
@@ -231,6 +238,51 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
+      {/* --- Overall Stats Summary Component --- */}
+      <section style={{ marginBottom: '2.5rem' }}>
+        <h3 style={{ marginBottom: '1rem' }}>Overall Performance Overview</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+
+          {/* Total Attempted Card */}
+          <div style={{ padding: '1.25rem', borderRadius: '12px', background: 'rgba(255, 255, 255, 0.04)', border: '1px solid #333' }}>
+            <span style={{ fontSize: '0.85rem', color: '#aaa', display: 'block', marginBottom: '6px' }}>Total Practice Volume</span>
+            <div style={{ fontSize: '1.8rem', fontWeight: 'bold' }}>{stats.total}</div>
+            <span style={{ fontSize: '0.75rem', color: '#888' }}>
+              {stats.categories.reduce((acc, cat) => acc + cat.seenCount, 0)} unique questions seen
+            </span>
+          </div>
+
+          {/* Correctly Answered Card */}
+          <div style={{ padding: '1.25rem', borderRadius: '12px', background: 'rgba(255, 255, 255, 0.04)', border: '1px solid #333' }}>
+            <span style={{ fontSize: '0.85rem', color: '#aaa', display: 'block', marginBottom: '6px' }}>Questions Correct</span>
+            <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#10b981' }}>{stats.totalCorrect}</div>
+            <span style={{ fontSize: '0.75rem', color: '#888' }}>
+              Out of {stats.total} total attempts
+            </span>
+          </div>
+
+          {/* Overall Accuracy Card */}
+          <div style={{ padding: '1.25rem', borderRadius: '12px', background: 'rgba(255, 255, 255, 0.04)', border: '1px solid #333' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '6px' }}>
+              <span style={{ fontSize: '0.85rem', color: '#aaa' }}>Overall Accuracy</span>
+              <span style={{ fontSize: '1.2rem', fontWeight: 'bold', color: stats.overallAccuracy >= 70 ? '#10b981' : stats.overallAccuracy >= 50 ? '#0070f3' : '#ef4444' }}>
+                {stats.overallAccuracy.toFixed(1)}%
+              </span>
+            </div>
+
+            <div style={{ height: '8px', background: '#222', borderRadius: '4px', overflow: 'hidden', marginTop: '12px' }}>
+              <div style={{
+                height: '100%',
+                width: `${stats.overallAccuracy}%`,
+                background: stats.overallAccuracy >= 70 ? '#10b981' : stats.overallAccuracy >= 50 ? '#0070f3' : '#ef4444',
+                transition: 'width 0.4s ease'
+              }} />
+            </div>
+          </div>
+
+        </div>
+      </section>
+
       <section style={{ marginBottom: '3rem' }}>
         <h3 style={{ marginBottom: '1.5rem' }}>7-Day Accuracy Trend</h3>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: '15px', height: '180px', padding: '10px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', borderBottom: '2px solid #444' }}>
@@ -247,9 +299,9 @@ export default function AnalyticsPage() {
       <div style={{ marginBottom: '2rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '10px', flexWrap: 'wrap', gap: '10px' }}>
           <h2 style={{ margin: 0 }}>Category Breakdown</h2>
-          
+
           <div style={{ position: 'relative', width: '100%', maxWidth: '300px' }}>
-            <input 
+            <input
               type="text"
               placeholder="Search categories..."
               value={searchTerm}
@@ -267,7 +319,7 @@ export default function AnalyticsPage() {
               }}
             />
             {searchTerm && (
-              <button 
+              <button
                 onClick={() => setSearchTerm('')}
                 style={{
                   position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
@@ -320,8 +372,7 @@ export default function AnalyticsPage() {
                 <strong style={{ fontSize: '1.1rem' }}>{cat.name}</strong>
                 <span style={{ fontWeight: 'bold', color: cat.accuracy > 75 ? '#10b981' : 'inherit' }}>{cat.accuracy.toFixed(0)}%</span>
               </div>
-              
-              {/* Last Attempted Label */}
+
               <div style={{ fontSize: '0.7rem', color: '#888', marginBottom: '10px' }}>
                 Last Attempted: {formatTimeAgo(cat.lastAttempted)}
               </div>
@@ -364,7 +415,7 @@ export default function AnalyticsPage() {
           );
         })}
       </div>
-      
+
       {filteredAndSortedCategories.length === 0 && (
         <div style={{ textAlign: 'center', padding: '3rem', color: '#666' }}>
           No categories found matching &quot;{searchTerm}&quot;

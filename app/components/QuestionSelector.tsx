@@ -35,7 +35,7 @@ export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorP
     const [searchedPhrases, setSearchedPhrases] = useState<SearchChip[]>([]);
     const [searchMode, setSearchMode] = useState<'AND' | 'OR'>('OR');
     const [searchingPhrase, setSearchingPhrase] = useState(false);
-    const [limit, setLimit] = useState(5);
+    const [limit, setLimit] = useState(1); //can we save the limit in local storage so it persists across sessions?
     const [unseenOnly, setUnseenOnly] = useState(false);
     const [loading, setLoading] = useState(false);
     const [minRating, setMinRating] = useState(1);
@@ -57,6 +57,24 @@ export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorP
             }, [] as string[]);
         }
     }, [searchedPhrases, searchMode]);
+
+    // 1. Read from localStorage once component mounts on the client
+    useEffect(() => {
+        const savedLimit = localStorage.getItem('question_selector_limit');
+        if (savedLimit !== null) {
+            const parsed = parseInt(savedLimit, 10);
+            if (!isNaN(parsed) && parsed > 0) {
+                setLimit(parsed);
+            }
+        }
+    }, []);
+
+    // 2. Handler to update state and localStorage simultaneously
+    const handleLimitChange = (val: number) => {
+        const newLimit = Math.max(1, val);
+        setLimit(newLimit);
+        localStorage.setItem('question_selector_limit', newLimit.toString());
+    };
 
     useEffect(() => {
         async function getCategories() {
@@ -86,29 +104,29 @@ export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorP
     const handleAddPhrase = async () => {
         if (!searchTerm.trim() || hasCategoryFilters) return;
         setSearchingPhrase(true);
-        
+
         const phrasesToAdd = searchTerm.split(',').map(p => p.trim()).filter(p => p.length > 0);
         const newChips: SearchChip[] = [...searchedPhrases];
-    
+
         try {
             for (const phrase of phrasesToAdd) {
                 if (newChips.find(c => c.phrase.toLowerCase() === phrase.toLowerCase())) continue;
-    
+
                 const { data, error } = await supabase
                     .rpc('search_questions_by_phrase', { search_term: phrase });
-    
+
                 if (error) throw error;
-                
+
                 // Explicitly typing the map function to satisfy TypeScript
                 const foundIds = (data as SearchResult[])?.map((q) => q.id) || [];
                 newChips.push({ phrase, ids: foundIds });
             }
             setSearchedPhrases(newChips);
             setSearchTerm('');
-        } catch (err) { 
-            console.error("Search Error:", err); 
-        } finally { 
-            setSearchingPhrase(false); 
+        } catch (err) {
+            console.error("Search Error:", err);
+        } finally {
+            setSearchingPhrase(false);
         }
     };
 
@@ -164,10 +182,10 @@ export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorP
             } else {
                 setNoResults(true);
             }
-        } catch (err) { 
-            console.error(err); 
-        } finally { 
-            setLoading(false); 
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -243,9 +261,14 @@ export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorP
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <label style={{ fontSize: '0.65rem', opacity: 0.6, marginLeft: '4px' }}>QUESTION LIMIT</label>
-                    <input type="number" value={limit} onChange={(e) => setLimit(parseInt(e.target.value) || 1)} style={{ padding: '10px', background: 'rgba(128,128,128,0.1)', border: '1px solid rgba(128,128,128,0.2)', color: 'inherit', borderRadius: '8px' }} />
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', marginTop: '18px' }}>
+                    <input
+                        type="number"
+                        min={1}
+                        value={limit}
+                        onChange={(e) => handleLimitChange(parseInt(e.target.value) || 1)}
+                        style={{ padding: '10px', background: 'rgba(128,128,128,0.1)', border: '1px solid rgba(128,128,128,0.2)', color: 'inherit', borderRadius: '8px' }}
+                    />
+                </div>                <div style={{ display: 'flex', alignItems: 'center', marginTop: '18px' }}>
                     <input type="checkbox" id="unseen" checked={unseenOnly} disabled={notMasteredOnly || minRating !== 1 || maxRating !== 10} onChange={(e) => setUnseenOnly(e.target.checked)} />
                     <label htmlFor="unseen" style={{ marginLeft: '8px', fontSize: '0.9rem', opacity: (unseenOnly) ? 1 : 0.6 }}>Unseen Only</label>
                 </div>

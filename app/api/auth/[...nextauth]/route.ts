@@ -35,6 +35,7 @@ const authOptions: NextAuthOptions = {
     GithubProvider({
       clientId: process.env.GITHUB_ID ?? "",
       clientSecret: process.env.GITHUB_SECRET ?? "",
+      issuer: "https://github.com/login/oauth",
     }),
     // ... add more providers if needed
   ],
