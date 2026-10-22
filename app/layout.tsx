@@ -9,6 +9,7 @@ import Navbar from "./components/Navbar";
 
 //auth components
 import { getServerSession } from "next-auth"; //server-side session fetcher
+import { authOptions } from "@/server/authOptions";
 
 import SessionProvider from "./components/SessionProvider/SessionProvider";
 
@@ -33,7 +34,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   return (
     <html lang="en">
       <body>

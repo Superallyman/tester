@@ -1,12 +1,14 @@
-// Session checks for API routes: every route needs a signed-in, allowlisted user
+// Session checks for API routes: every route needs a signed-in user with an enabled account
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
-import { ALLOWED_USERS } from '@/utils/allowlist';
+import { accountById } from './authOptions';
 
 export interface ApiUser {
+    id: string;
     email: string;
     name: string;
+    isAdmin: boolean;
 }
 
 export class HttpError extends Error {
@@ -15,20 +17,21 @@ export class HttpError extends Error {
     }
 }
 
+// Reads the account on every call, so disabling someone takes effect without waiting for their session to expire
 export async function requireUser(req: NextRequest): Promise<ApiUser> {
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-    const name = (token?.name || token?.login) as string | undefined;
-    if (!token || !name) throw new HttpError(401, 'Not signed in');
-    if (!ALLOWED_USERS.includes(name)) throw new HttpError(403, 'Not allowed');
-    if (!token.email) throw new HttpError(403, 'Account has no email');
-    return { email: token.email, name };
+    if (!token?.uid) throw new HttpError(401, 'Not signed in');
+    const account = await accountById(token.uid);
+    if (!account || account.disabled) throw new HttpError(403, 'Not allowed');
+    return { id: account.id, email: account.email, name: account.name, isAdmin: account.is_admin };
 }
 
 /** Wraps a route handler so auth failures and bad input become JSON errors instead of 500 pages. */
-export function handler<C>(fn: (req: NextRequest, user: ApiUser, ctx: C) => Promise<unknown>) {
+export function handler<C>(fn: (req: NextRequest, user: ApiUser, ctx: C) => Promise<unknown>, opts?: { admin?: boolean }) {
     return async (req: NextRequest, ctx: C) => {
         try {
             const user = await requireUser(req);
+            if (opts?.admin && !user.isAdmin) throw new HttpError(403, 'Admins only');
             return NextResponse.json(await fn(req, user, ctx));
         } catch (err) {
             if (err instanceof HttpError) return NextResponse.json({ error: err.message }, { status: err.status });
