@@ -24,3 +24,6 @@ and query Postgres through `server/db.ts`.
 `./postgres/sync-from-supabase.sh` replaces all local rows with a fresh `pg_dump` of the Supabase tables, in one
 transaction, and prints row counts from both sides. It needs `SUPABASE_DB_HOST`, `SUPABASE_DB_USER` and
 `SUPABASE_DB_PASSWORD` in `.env.local` (the IPv4 session pooler, since this VM has no IPv6).
+
+`./postgres/verify-against-supabase.sh` compares row counts and checksums of every table on both sides and prints
+MATCH or DIFFERENT. Run it right after a sync.
