@@ -14,3 +14,26 @@ services:
     ports:
       - "3000:3000"
     restart: unless-stopped
+
+  # Local Postgres replacing Supabase. Bound to 127.0.0.1 so only this VM can reach it.
+  # Start just the database with: docker compose up -d db
+  db:
+    image: postgres:17-alpine
+    container_name: optotester-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: optotester
+      POSTGRES_USER: optotester
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U optotester -d optotester"]
+      interval: 5s
+      retries: 10
+
+volumes:
+  pgdata:

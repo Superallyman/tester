@@ -1,11 +1,9 @@
 "use client"
 
 import React, { useEffect, useState, useRef } from 'react';
-import { supabase } from '@/utils/supabase';
-import { useSession } from "next-auth/react";
+import { api } from '@/utils/api';
 
 import { smartClean } from '@/utils/formatters';
-import { fetchByIds } from '@/utils/fetchAll';
 
 interface Question {
     id: string;
@@ -27,7 +25,6 @@ interface RatingPickerProps {
 }
 
 export default function QuizEngine({ questionIds }: QuizEngineProps) {
-    const { data: session } = useSession();
     const [questions, setQuestions] = useState<Question[]>([]);
     const [userSelections, setUserSelections] = useState<Record<string, string[]>>({});
     const [ratings, setRatings] = useState<Record<string, number | undefined>>({});
@@ -61,8 +58,7 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
     useEffect(() => {
         async function fetchQuestions() {
             if (questionIds.length === 0) return;
-            // Batched: long id lists (e.g. drilling a practice exam's misses) overflow a single request URL
-            const data = await fetchByIds<Question>(questionIds, chunk => supabase.from('questions').select(`*`).in('id', chunk)).catch(() => null);
+            const data = await api<Question[]>('/api/questions', { body: { ids: questionIds } }).catch(() => null);
             if (data) {
                 const sortedData = questionIds
                     .map(id => data.find(q => q.id === id))
@@ -108,14 +104,13 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
                     is_correct: isCorrect,
                     user_rating: ratings[q.id],
                     satisfaction_rating: ratings[q.id],
-                    user_email: session?.user?.email || "anonymous",
                     submitted_answer: selected,
                 };
             });
 
         if (activitiesToInsert.length > 0) {
-            const { data, error } = await supabase.from('user_activity').insert(activitiesToInsert).select('id, question_id');
-            if (!error && data) {
+            const data = await api<{ id: string; question_id: string }[]>('/api/activity', { body: { rows: activitiesToInsert } }).catch(err => { console.error(err); return null; });
+            if (data) {
                 const idMap: Record<string, string> = {};
                 const satMap: Record<string, number> = {};
                 data.forEach(row => {
@@ -135,8 +130,8 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
         const dbId = activityIds[qId];
 
         if (dbId && scoreVal === undefined) {
-            const { error } = await supabase.from('user_activity').delete().eq('id', dbId);
-            if (!error) {
+            const ok = await api(`/api/activity/${dbId}`, { method: 'DELETE' }).then(() => true, () => false);
+            if (ok) {
                 setActivityIds(prev => {
                     const next = { ...prev };
                     delete next[qId];
@@ -152,23 +147,18 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
             const isCorrect = selected.length === q.correct_answers.length &&
                 selected.every(val => q.correct_answers.includes(val));
 
-            const { data, error } = await supabase.from('user_activity').insert({
-                question_id: qId,
-                is_correct: isCorrect,
-                user_rating: scoreVal,
-                satisfaction_rating: scoreVal,
-                user_email: session?.user?.email || "anonymous",
-                submitted_answer: selected,
-            }).select('id').single();
+            const data = await api<{ id: string }[]>('/api/activity', {
+                body: { rows: [{ question_id: qId, is_correct: isCorrect, user_rating: scoreVal, satisfaction_rating: scoreVal, submitted_answer: selected }] },
+            }).catch(() => null);
 
-            if (!error && data) {
-                setActivityIds(prev => ({ ...prev, [qId]: data.id }));
+            if (data?.[0]) {
+                setActivityIds(prev => ({ ...prev, [qId]: data[0].id }));
             }
             return;
         }
 
         if (dbId && scoreVal !== undefined) {
-            await supabase.from('user_activity').update({ satisfaction_rating: scoreVal }).eq('id', dbId);
+            await api(`/api/activity/${dbId}`, { method: 'PATCH', body: { satisfaction_rating: scoreVal } }).catch(console.error);
         }
     };
 

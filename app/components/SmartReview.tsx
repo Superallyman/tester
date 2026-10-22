@@ -4,8 +4,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useSession } from "next-auth/react";
-import { supabase } from '@/utils/supabase';
-import { fetchAll } from '@/utils/fetchAll';
+import { api } from '@/utils/api';
 
 interface SmartReviewProps {
     onQuestionsFound: (ids: string[]) => void;
@@ -15,7 +14,7 @@ interface ActivityRow {
     question_id: string;
     is_correct: boolean;
     attempted_at: string;
-    questions: { category: string } | { category: string }[] | null;
+    category: string | null;
 }
 
 interface Preset {
@@ -38,10 +37,7 @@ const shuffle = <T,>(arr: T[]) => {
     return a;
 };
 
-const categoryOf = (row: ActivityRow) => {
-    const raw = Array.isArray(row.questions) ? row.questions[0]?.category : row.questions?.category;
-    return raw?.trim().replace(/\s+/g, ' ') || 'General';
-};
+const categoryOf = (row: ActivityRow) => row.category?.trim().replace(/\s+/g, ' ') || 'General';
 
 export default function SmartReview({ onQuestionsFound }: SmartReviewProps) {
     const { data: session } = useSession();
@@ -55,12 +51,7 @@ export default function SmartReview({ onQuestionsFound }: SmartReviewProps) {
         let cancelled = false;
 
         (async () => {
-            const rows = await fetchAll<ActivityRow>(() => supabase
-                .from('user_activity')
-                .select('question_id, is_correct, attempted_at, questions (category)')
-                .eq('user_email', email)
-                .order('attempted_at', { ascending: true })
-                .order('id')).catch(() => [] as ActivityRow[]);
+            const rows = await api<ActivityRow[]>('/api/activity').catch(() => [] as ActivityRow[]);
             if (cancelled) return;
             if (rows.length === 0) { setPresets([]); return; }
 
@@ -108,9 +99,8 @@ export default function SmartReview({ onQuestionsFound }: SmartReviewProps) {
         setLoadingWeak(true);
         try {
             const [questions, activity] = await Promise.all([
-                fetchAll<{ id: string; category: string }>(() => supabase.from('questions').select('id, category').order('id')),
-                fetchAll<{ question_id: string; is_correct: boolean }>(() =>
-                    supabase.from('user_activity').select('question_id, is_correct').eq('user_email', email).order('id')),
+                api<{ id: string; category: string }[]>('/api/questions'),
+                api<{ question_id: string; is_correct: boolean }[]>('/api/activity'),
             ]);
             const mastered = new Set(activity.filter(a => a.is_correct).map(a => a.question_id));
             const pool = questions

@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect, useState } from 'react';
-import { supabase } from '@/utils/supabase';
+import { api } from '@/utils/api';
 
 import {
     EXAM_PRESETS, ExamConfig, ExamSummary, ExamState, SECONDS_PER_ITEM, formatClock, loadHistory,
@@ -45,15 +45,14 @@ export default function ExamSetup({ signedIn, resumable, hasLastResult, busy, er
 
     useEffect(() => {
         setHistory(loadHistory());
-        supabase.rpc('get_category_counts').then(({ data }) => {
-            if (!data) return;
+        api<{ cat_name: string; q_count: number }[]>('/api/categories').then(data => {
             const merged: Record<string, number> = {};
-            (data as { cat_name: string; q_count: number }[]).forEach(c => {
+            data.forEach(c => {
                 const name = c.cat_name?.trim().replace(/\s+/g, ' ') || 'General';
                 merged[name] = (merged[name] || 0) + c.q_count;
             });
             setCategories(Object.entries(merged).map(([name, count]) => ({ name, count })).sort((a, b) => a.name.localeCompare(b.name)));
-        });
+        }).catch(console.error);
     }, []);
 
     const chosen = EXAM_PRESETS.find(p => p.key === preset);

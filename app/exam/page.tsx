@@ -2,9 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { useSession } from "next-auth/react";
-import { supabase } from '@/utils/supabase';
+import { api } from '@/utils/api';
 import { smartClean } from '@/utils/formatters';
-import { fetchAll, fetchByIds } from '@/utils/fetchAll';
 
 import ExamSetup, { PoolFilter } from './ExamSetup';
 import ExamShell from './ExamShell';
@@ -47,13 +46,12 @@ export default function PracticeExamPage() {
         setBusy(true);
         setError(null);
         try {
-            let pool = (await fetchAll<{ id: string; category: string }>(() => supabase.from('questions').select('id, category').order('id')))
+            let pool = (await api<{ id: string; category: string }[]>('/api/questions'))
                 .map(p => ({ ...p, category: normalizeCategory(p.category) }));
             if (categories.length) pool = pool.filter(p => categories.includes(p.category));
 
             if (filter !== 'all' && email) {
-                const activity = await fetchAll<{ question_id: string; is_correct: boolean }>(() =>
-                    supabase.from('user_activity').select('question_id, is_correct').eq('user_email', email).order('id'));
+                const activity = await api<{ question_id: string; is_correct: boolean }[]>('/api/activity');
                 const seen = new Set(activity.map(a => a.question_id));
                 const mastered = new Set(activity.filter(a => a.is_correct).map(a => a.question_id));
                 pool = pool.filter(p => {
@@ -69,7 +67,7 @@ export default function PracticeExamPage() {
             }
 
             const ids = blueprintSample(pool, config.count);
-            const rows = await fetchByIds<ExamQuestion>(ids, chunk => supabase.from('questions').select('*').in('id', chunk));
+            const rows = await api<ExamQuestion[]>('/api/questions', { body: { ids } });
             const byId = new Map(rows.map(r => [r.id, r]));
             const questions: ExamQuestion[] = ids
                 .map(id => byId.get(id))
@@ -142,13 +140,12 @@ export default function PracticeExamPage() {
                     is_correct: isCorrect(q, state.answers[q.id]),
                     user_rating: null,
                     satisfaction_rating: null,
-                    user_email: email,
                     submitted_answer: state.answers[q.id],
                 }));
             for (let i = 0; i < rows.length; i += 100) {
-                const { error: insertError } = await supabase.from('user_activity').insert(rows.slice(i, i + 100));
-                if (insertError) { console.error(insertError); break; }
-                savedCount += rows.slice(i, i + 100).length;
+                const inserted = await api<unknown[]>('/api/activity', { body: { rows: rows.slice(i, i + 100) } }).catch(err => { console.error(err); return null; });
+                if (!inserted) break;
+                savedCount += inserted.length;
             }
         }
 

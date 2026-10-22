@@ -1,9 +1,8 @@
 "use client"
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { supabase } from '@/utils/supabase';
+import { api } from '@/utils/api';
 import { useSession } from "next-auth/react";
-import { fetchAll } from '@/utils/fetchAll';
 
 // --- Types & Interfaces ---
 type SortType = 'alpha' | 'worst' | 'best' | 'urgency' | 'mastery' | 'frustration';
@@ -42,7 +41,7 @@ interface UserActivityEntry {
   satisfaction_rating: number | null;
   attempted_at: string;
   question_id: string;
-  questions: { category: string } | { category: string }[] | null;
+  category: string | null;
 }
 
 interface CategoryMapEntry {
@@ -96,7 +95,7 @@ export default function AnalyticsPage() {
     data.forEach(entry => {
       if (entry.is_correct) totalCorrect++;
 
-      const rawCat = Array.isArray(entry.questions) ? entry.questions[0]?.category : entry.questions?.category;
+      const rawCat = entry.category;
       const cat = rawCat?.trim() || 'General';
 
       const dateObj = new Date(entry.attempted_at);
@@ -178,8 +177,7 @@ export default function AnalyticsPage() {
     async function fetchEverything() {
       if (status === "loading" || !session?.user?.email) return;
 
-      const { data: countsData, error: countErr } = await supabase.rpc('get_category_counts');
-      if (countErr) console.error(countErr);
+      const countsData = await api<{ cat_name: string, q_count: number }[]>('/api/categories').catch(err => { console.error(err); return null; });
 
       const totalPerCat: Record<string, number> = {};
       countsData?.forEach((item: { cat_name: string, q_count: number }) => {
@@ -187,18 +185,9 @@ export default function AnalyticsPage() {
         totalPerCat[normalized] = Number(item.q_count);
       });
 
-      const email = session.user.email;
       try {
-        // Paged: a plain select stops at 1000 rows, which one or two full practice exams can exceed
-        const activity = await fetchAll<UserActivityEntry>(() => supabase
-          .from('user_activity')
-          .select(`
-            is_correct, user_rating, satisfaction_rating, attempted_at, question_id,
-            questions (category)
-          `)
-          .eq('user_email', email)
-          .order('attempted_at', { ascending: false })
-          .order('id'));
+        // Newest first, as the analytics code expects
+        const activity = (await api<UserActivityEntry[]>('/api/activity')).reverse();
         processAnalytics(activity, totalPerCat);
       } catch (activityErr) {
         console.error(activityErr);

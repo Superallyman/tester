@@ -1,9 +1,7 @@
 "use client"
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { useSession } from "next-auth/react";
-import { supabase } from '@/utils/supabase';
-import { fetchAll } from '@/utils/fetchAll';
+import { api } from '@/utils/api';
 import { BLUEPRINT } from '@/app/exam/blueprint';
 import {
     ActivityRow, MIN_ATTEMPTS_PER_CELL, MIN_ATTEMPTS_TO_RANK, ROW_LABELS, UserStats, Window, buildStats, pct,
@@ -65,8 +63,7 @@ const relativeDay = (iso: string | null) => {
 };
 
 export default function LeaderboardPage() {
-    const { data: session } = useSession();
-    const me = session?.user?.email?.toLowerCase() || null;
+    const [me, setMe] = useState<string | null>(null);
 
     const [rows, setRows] = useState<ActivityRow[] | null>(null);
     const [bankSize, setBankSize] = useState(0);
@@ -76,17 +73,12 @@ export default function LeaderboardPage() {
 
     useEffect(() => {
         let cancelled = false;
-        Promise.all([
-            fetchAll<ActivityRow>(() => supabase
-                .from('user_activity')
-                .select('question_id, is_correct, attempted_at, user_email, submitted_answer, questions (category)')
-                .order('id')),
-            supabase.from('questions').select('id', { count: 'exact', head: true }),
-        ])
-            .then(([activity, { count }]) => {
+        api<{ me: string; bankSize: number; rows: ActivityRow[] }>('/api/leaderboard')
+            .then(data => {
                 if (cancelled) return;
-                setRows(activity);
-                setBankSize(count || 0);
+                setRows(data.rows);
+                setBankSize(data.bankSize);
+                setMe(data.me);
             })
             .catch(err => {
                 console.error(err);
@@ -130,16 +122,16 @@ export default function LeaderboardPage() {
         const qualified = users
             .filter(u => (u.byRow[key]?.total || 0) >= MIN_ATTEMPTS_PER_CELL)
             .sort((a, b) => (pct(b.byRow[key]) ?? 0) - (pct(a.byRow[key]) ?? 0));
-        return qualified.length >= 2 ? qualified[0].email : null;
+        return qualified.length >= 2 ? qualified[0].key : null;
     };
 
-    const myRank = me ? ranked.findIndex(u => u.email === me) : -1;
+    const myRank = me ? ranked.findIndex(u => u.key === me) : -1;
     const rival = myRank > 0 ? ranked[myRank - 1] : null;
-    const meStats = me ? users.find(u => u.email === me) : undefined;
+    const meStats = me ? users.find(u => u.key === me) : undefined;
 
     const nameCell = (u: UserStats) => (
-        <span style={{ fontWeight: u.email === me ? 700 : 500 }}>
-            {u.name}{u.email === me && <span style={{ opacity: 0.6, fontWeight: 400 }}> (you)</span>}
+        <span style={{ fontWeight: u.key === me ? 700 : 500 }}>
+            {u.name}{u.key === me && <span style={{ opacity: 0.6, fontWeight: 400 }}> (you)</span>}
         </span>
     );
 
@@ -205,7 +197,7 @@ export default function LeaderboardPage() {
                                     {columns.map((u, i) => {
                                         const isRanked = i < ranked.length;
                                         return (
-                                            <tr key={u.email} style={{ borderTop: '1px solid rgba(128,128,128,0.15)', background: u.email === me ? 'rgba(0,112,243,0.06)' : undefined, opacity: isRanked ? 1 : 0.55 }}>
+                                            <tr key={u.key} style={{ borderTop: '1px solid rgba(128,128,128,0.15)', background: u.key === me ? 'rgba(0,112,243,0.06)' : undefined, opacity: isRanked ? 1 : 0.55 }}>
                                                 <td style={{ ...td, fontSize: '1.05rem' }}>{isRanked ? (MEDALS[i] || i + 1) : '–'}</td>
                                                 <td style={td}>
                                                     {nameCell(u)}
@@ -250,7 +242,7 @@ export default function LeaderboardPage() {
                                             <strong>{g.trail.u.name}</strong> is at <strong>{fmtPct(g.trail.acc)}</strong>.
                                         </div>
                                         <div style={{ fontSize: '0.78rem', opacity: 0.7, marginTop: 6 }}>
-                                            {g.gap.toFixed(0)}-point gap. {g.trail.u.email === me ? `Ask ${g.lead.u.name} how they study this.` : g.lead.u.email === me ? `Share your notes with ${g.trail.u.name}.` : 'Time to swap notes.'}
+                                            {g.gap.toFixed(0)}-point gap. {g.trail.u.key === me ? `Ask ${g.lead.u.name} how they study this.` : g.lead.u.key === me ? `Share your notes with ${g.trail.u.name}.` : 'Time to swap notes.'}
                                         </div>
                                     </div>
                                 ))}
@@ -265,7 +257,7 @@ export default function LeaderboardPage() {
                                 <thead>
                                     <tr>
                                         <th style={th}>CONTENT AREA</th>
-                                        {columns.map(u => <th key={u.email} style={{ ...th, textAlign: 'center' }}>{nameCell(u)}</th>)}
+                                        {columns.map(u => <th key={u.key} style={{ ...th, textAlign: 'center' }}>{nameCell(u)}</th>)}
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -280,7 +272,7 @@ export default function LeaderboardPage() {
                                                     const thin = !t || t.total < MIN_ATTEMPTS_PER_CELL;
                                                     return (
                                                         <td
-                                                            key={u.email}
+                                                            key={u.key}
                                                             title={t ? `${u.name} · ${ROW_LABELS[key]}: ${t.correct}/${t.total} correct${thin ? ' (small sample)' : ''}` : `${u.name} hasn't tried ${ROW_LABELS[key]} yet`}
                                                             style={{
                                                                 textAlign: 'center',
@@ -294,7 +286,7 @@ export default function LeaderboardPage() {
                                                         >
                                                             {acc === null ? '—' : (
                                                                 <>
-                                                                    <strong>{leader === u.email && '★ '}{fmtPct(acc)}</strong>
+                                                                    <strong>{leader === u.key && '★ '}{fmtPct(acc)}</strong>
                                                                     <div style={{ fontSize: '0.68rem', opacity: 0.65 }}>{t.total}</div>
                                                                 </>
                                                             )}

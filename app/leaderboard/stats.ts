@@ -6,9 +6,9 @@ export interface ActivityRow {
     question_id: string;
     is_correct: boolean;
     attempted_at: string;
-    user_email: string | null;
-    submitted_answer: string[] | null;
-    questions: { category: string } | { category: string }[] | null;
+    user: string | null; // name part of the email; the API never sends full addresses
+    answered: boolean; // false for blank submissions
+    category: string | null;
 }
 
 export type Window = 'all' | '30' | '7';
@@ -16,7 +16,7 @@ export type Window = 'all' | '30' | '7';
 export interface Tally { correct: number; total: number }
 
 export interface UserStats {
-    email: string;
+    key: string;
     name: string;
     attempts: number;
     correct: number;
@@ -33,12 +33,10 @@ export interface UserStats {
 }
 
 // Accounts that never show on the board
-const HIDDEN = new Set(['anonymous', 'claude-e2e@invalid']);
+const HIDDEN = new Set(['anonymous', 'claude-e2e']);
 
 export const MIN_ATTEMPTS_TO_RANK = 25;
 export const MIN_ATTEMPTS_PER_CELL = 8;
-
-export const displayName = (email: string) => email.split('@')[0];
 
 const dayKey = (iso: string) => {
     const d = new Date(iso);
@@ -46,8 +44,7 @@ const dayKey = (iso: string) => {
 };
 
 const categoryOf = (row: ActivityRow) => {
-    const raw = Array.isArray(row.questions) ? row.questions[0]?.category : row.questions?.category;
-    return raw?.trim().replace(/\s+/g, ' ') || 'General';
+    return row.category?.trim().replace(/\s+/g, ' ') || 'General';
 };
 
 export const rowKeyOf = (row: ActivityRow) => blueprintKey(categoryOf(row)) ?? 'other';
@@ -85,15 +82,14 @@ export const buildStats = (rows: ActivityRow[], window: Window, bankSize: number
     const since = window === 'all' ? 0 : Date.now() - Number(window) * 86400000;
     const byUser = new Map<string, ActivityRow[]>();
     rows.forEach(r => {
-        const email = r.user_email?.trim().toLowerCase();
-        if (!email || HIDDEN.has(email)) return;
+        if (!r.user || HIDDEN.has(r.user)) return;
         // Blank submissions are skips or bulk-inserted dev data, not real attempts
-        if (!r.submitted_answer?.length) return;
-        if (!byUser.has(email)) byUser.set(email, []);
-        byUser.get(email)!.push(r);
+        if (!r.answered) return;
+        if (!byUser.has(r.user)) byUser.set(r.user, []);
+        byUser.get(r.user)!.push(r);
     });
 
-    return [...byUser.entries()].map(([email, all]) => {
+    return [...byUser.entries()].map(([key, all]) => {
         all.sort((a, b) => a.attempted_at.localeCompare(b.attempted_at));
         const allDays = new Set(all.map(r => dayKey(r.attempted_at)));
         const { current, best } = streaks(allDays);
@@ -123,8 +119,8 @@ export const buildStats = (rows: ActivityRow[], window: Window, bankSize: number
         });
 
         return {
-            email,
-            name: displayName(email),
+            key,
+            name: key,
             attempts,
             correct,
             accuracy: attempts ? (correct / attempts) * 100 : 0,

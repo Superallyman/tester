@@ -1,9 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { supabase } from '@/utils/supabase';
-import { useSession } from "next-auth/react";
-import { fetchAll } from '@/utils/fetchAll';
+import { api, qs } from '@/utils/api';
 
 interface QuestionSelectorProps {
     onQuestionsFound: (ids: string[]) => void;
@@ -26,7 +24,6 @@ interface SearchResult {
 }
 
 export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorProps) {
-    const { data: session } = useSession();
     const [availableCategories, setAvailableCategories] = useState<string[]>([]);
     const [showCategories, setShowCategories] = useState(false);
     const [showPhrases, setShowPhrases] = useState(false);
@@ -79,7 +76,7 @@ export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorP
 
     useEffect(() => {
         async function getCategories() {
-            const { data: countsData } = await supabase.rpc('get_category_counts');
+            const countsData = await api<{ cat_name: string }[]>('/api/categories').catch(() => null);
             if (!countsData) return;
             const uniqueCats = (countsData as { cat_name: string }[])
                 .map(item => item.cat_name?.trim().replace(/\s+/g, ' ') || 'General')
@@ -113,10 +110,7 @@ export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorP
             for (const phrase of phrasesToAdd) {
                 if (newChips.find(c => c.phrase.toLowerCase() === phrase.toLowerCase())) continue;
 
-                const { data, error } = await supabase
-                    .rpc('search_questions_by_phrase', { search_term: phrase });
-
-                if (error) throw error;
+                const data = await api<SearchResult[]>(`/api/questions${qs({ search: phrase })}`);
 
                 // Explicitly typing the map function to satisfy TypeScript
                 const foundIds = (data as SearchResult[])?.map((q) => q.id) || [];
@@ -134,11 +128,9 @@ export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorP
     const findQuestions = async () => {
         setLoading(true);
         setNoResults(false);
-        const userEmail = session?.user?.email || "anonymous";
 
         try {
-            const activityData = await fetchAll<{ question_id: string; is_correct: boolean; user_rating: number | null }>(() =>
-                supabase.from('user_activity').select('question_id, is_correct, user_rating').eq('user_email', userEmail).order('id'));
+            const activityData = await api<{ question_id: string; is_correct: boolean; user_rating: number | null }[]>('/api/activity');
 
             const statsByQuestion: Record<string, QuestionStat> = {};
             activityData.forEach(a => {
@@ -156,17 +148,16 @@ export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorP
                 return;
             }
 
-            // Paged so the pool covers the whole bank, not just the first 1000 rows
-            const baseQuestions = await fetchAll<{ id: string }>(() => {
-                let finalQuery = supabase.from('questions').select('id').order('id');
-                if (hasPhraseFilters) {
-                    finalQuery = finalQuery.in('id', currentPoolIds);
-                } else if (hasCategoryFilters) {
-                    const targetCats = includedCats.length > 0 ? includedCats : availableCategories.filter(c => !excludedCats.includes(c));
-                    finalQuery = finalQuery.in('category', targetCats);
-                }
-                return finalQuery;
-            });
+            // Phrase searches already returned question ids; otherwise ask for the (optionally category-filtered) bank
+            let baseQuestions: { id: string }[];
+            if (hasPhraseFilters) {
+                baseQuestions = currentPoolIds.map(id => ({ id }));
+            } else {
+                const targetCats = !hasCategoryFilters ? [] : includedCats.length > 0 ? includedCats : availableCategories.filter(c => !excludedCats.includes(c));
+                baseQuestions = hasCategoryFilters && targetCats.length === 0
+                    ? []
+                    : await api<{ id: string }[]>(`/api/questions${qs({ category: targetCats })}`);
+            }
 
             const filtered = (baseQuestions || []).filter(q => {
                 const stats = statsByQuestion[q.id];

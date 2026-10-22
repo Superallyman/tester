@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { supabase } from '@/utils/supabase';
+import { api, qs } from '@/utils/api';
 import { useSession } from "next-auth/react";
 
 import { smartClean } from '@/utils/formatters';
@@ -60,7 +60,7 @@ export default function HistoryPage() {
     // 1. Fetch Categories
     useEffect(() => {
         async function getCategories() {
-            const { data } = await supabase.rpc('get_category_counts');
+            const data = await api<{ cat_name: string }[]>('/api/categories').catch(() => null);
             if (data) {
                 const uniqueCats = (data as { cat_name: string }[])
                     .map(item => item.cat_name?.trim() || 'General')
@@ -79,28 +79,21 @@ export default function HistoryPage() {
         setLoading(true);
 
         const start = isNewSearch ? 0 : page * PAGE_SIZE;
-        const end = start + PAGE_SIZE - 1;
 
-        let query = supabase
-            .from('user_activity')
-            .select(`
-            id, attempted_at, updated_at, is_correct, user_rating, satisfaction_rating, submitted_answer,
-            questions!inner (question_text, options, correct_answers, explanation, category)
-        `)
-            .eq('user_email', session.user.email);
-
-        // Apply filters
-        if (statusFilter !== 'all') query = query.eq('is_correct', statusFilter === 'correct');
-        if (satFilter !== 'all') query = query.eq('satisfaction_rating', satFilter);
-        if (selectedCats.length > 0) query = query.in('questions.category', selectedCats);
-
-        // Sorting logic
-        if (sortOrder === 'newest') query = query.order('attempted_at', { ascending: false });
-        else if (sortOrder === 'oldest') query = query.order('attempted_at', { ascending: true });
-        else if (sortOrder === 'confidence') query = query.order('user_rating', { ascending: false });
-        else if (sortOrder === 'satisfaction') query = query.order('satisfaction_rating', { ascending: false, nullsFirst: false });
-
-        const { data, error } = await query.range(start, end);
+        let data: unknown[] | null = null;
+        let error: unknown = null;
+        try {
+            data = await api<unknown[]>(`/api/activity/history${qs({
+                status: statusFilter === 'all' ? undefined : statusFilter,
+                sat: satFilter === 'all' ? undefined : satFilter,
+                category: selectedCats,
+                sort: sortOrder,
+                offset: start,
+                limit: PAGE_SIZE,
+            })}`);
+        } catch (err) {
+            error = err;
+        }
 
         if (error) {
             console.error(error);
@@ -142,13 +135,13 @@ export default function HistoryPage() {
         const newScore = currentItem?.satisfaction_rating === score ? null : score;
 
         setHistory(prev => prev.map(item => item.id === id ? { ...item, satisfaction_rating: newScore } : item));
-        await supabase.from('user_activity').update({ satisfaction_rating: newScore }).eq('id', id);
+        await api(`/api/activity/${id}`, { method: 'PATCH', body: { satisfaction_rating: newScore } }).catch(console.error);
     };
 
     const handleDelete = async (id: string) => {
         if (!confirm("Delete this attempt?")) return;
         setHistory(prev => prev.filter(item => item.id !== id));
-        await supabase.from('user_activity').delete().eq('id', id);
+        await api(`/api/activity/${id}`, { method: 'DELETE' }).catch(console.error);
     };
 
 

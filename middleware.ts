@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
+import { ALLOWED_USERS } from "./utils/allowlist";
 
-const ALLOWED_USERS = ["Superallyman", "Ryan Jobe", "username3", "Amer1001", "bryanjennell-byte"];
 
 export async function middleware(request: NextRequest) {
   const token = await getToken({
