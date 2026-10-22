@@ -11,7 +11,7 @@ interface ExamResultsProps {
     onNewExam: () => void;
 }
 
-type ItemFilter = 'incorrect' | 'all' | 'flagged' | 'unanswered' | 'critiqued';
+type ItemFilter = 'incorrect' | 'all' | 'flagged' | 'unanswered' | 'critiqued' | 'slowest';
 
 const card: React.CSSProperties = {
     padding: '1.25rem',
@@ -53,12 +53,23 @@ export default function ExamResults({ summary, questions, onNewExam }: ExamResul
         const multi = questions.filter(q => q.correct_answers.length > 1);
         const flagged = questions.filter(q => summary.flaggedIds.includes(q.id));
         const rate = (list: ExamQuestion[]) => list.length ? list.filter(q => isCorrect(q, summary.answers[q.id])).length : 0;
+        const spent = summary.timeSpent || {};
+        const avgTime = (list: ExamQuestion[]) => list.length ? list.reduce((sum, q) => sum + (spent[q.id] || 0), 0) / list.length : 0;
+        const answeredQs = questions.filter(q => (summary.answers[q.id] || []).length);
         return {
+            timeRight: avgTime(answeredQs.filter(q => isCorrect(q, summary.answers[q.id]))),
+            timeWrong: avgTime(answeredQs.filter(q => !isCorrect(q, summary.answers[q.id]))),
+            hasTiming: Object.keys(spent).length > 0,
             single: { correct: rate(single), total: single.length },
             multi: { correct: rate(multi), total: multi.length },
             flagged: { correct: rate(flagged), total: flagged.length },
         };
     }, [questions, summary]);
+
+    const spent = summary.timeSpent || {};
+    const slowestIds = new Set(
+        [...questions].filter(q => spent[q.id]).sort((a, b) => (spent[b.id] || 0) - (spent[a.id] || 0)).slice(0, 10).map(q => q.id),
+    );
 
     const items = questions.filter(q => {
         if (category && (q.category?.trim() || 'General') !== category) return false;
@@ -67,8 +78,10 @@ export default function ExamResults({ summary, questions, onNewExam }: ExamResul
         if (filter === 'flagged') return summary.flaggedIds.includes(q.id);
         if (filter === 'unanswered') return sel.length === 0;
         if (filter === 'critiqued') return !!summary.critiques[q.id];
+        if (filter === 'slowest') return slowestIds.has(q.id);
         return true;
     });
+    if (filter === 'slowest') items.sort((a, b) => (spent[b.id] || 0) - (spent[a.id] || 0));
 
     const counts: Record<ItemFilter, number> = {
         incorrect: summary.incorrectIds.length,
@@ -76,6 +89,7 @@ export default function ExamResults({ summary, questions, onNewExam }: ExamResul
         flagged: summary.flaggedIds.length,
         unanswered: questions.filter(q => !(summary.answers[q.id] || []).length).length,
         critiqued: Object.keys(summary.critiques).length,
+        slowest: slowestIds.size,
     };
 
     const drillMissed = () => {
@@ -117,6 +131,13 @@ export default function ExamResults({ summary, questions, onNewExam }: ExamResul
                 )}
                 {insights.flagged.total > 0 && (
                     <Stat label="FLAGGED ITEMS" value={`${insights.flagged.correct}/${insights.flagged.total}`} sub="how your second-guesses turned out" />
+                )}
+                {insights.hasTiming && (
+                    <Stat
+                        label="AVG TIME: RIGHT vs WRONG"
+                        value={`${Math.round(insights.timeRight)}s / ${Math.round(insights.timeWrong)}s`}
+                        sub={insights.timeWrong > insights.timeRight * 1.3 ? 'you linger on the ones you miss' : 'similar pacing either way'}
+                    />
                 )}
                 <Stat
                     label="SAVED TO HISTORY"
@@ -164,7 +185,7 @@ export default function ExamResults({ summary, questions, onNewExam }: ExamResul
 
             <section>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
-                    {(['incorrect', 'all', 'flagged', 'unanswered', 'critiqued'] as ItemFilter[]).filter(f => f === 'all' || counts[f] > 0).map(f => (
+                    {(['incorrect', 'all', 'flagged', 'unanswered', 'critiqued', 'slowest'] as ItemFilter[]).filter(f => f === 'all' || counts[f] > 0).map(f => (
                         <button
                             key={f}
                             onClick={() => setFilter(f)}
@@ -199,6 +220,7 @@ export default function ExamResults({ summary, questions, onNewExam }: ExamResul
                                 <span style={{ flex: 1, lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: open ? 'unset' : 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                                     {q.question_text}
                                 </span>
+                                {spent[q.id] > 0 && <span title="Time on this item" style={{ fontSize: '0.75rem', opacity: 0.6, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{formatClock(spent[q.id]).replace(/^0:/, '')}</span>}
                                 {summary.flaggedIds.includes(q.id) && <span title="Flagged" style={{ color: '#f59e0b' }}>⚑</span>}
                             </button>
                             {open && (

@@ -45,6 +45,7 @@ export interface ExamState {
     // When the candidate is stepping through a filtered set from the Review screen
     reviewQueue: string[] | null;
     colorScheme: string;
+    timeSpent?: Record<string, number>; // seconds on each item while it was on screen
 }
 
 export interface CategoryResult {
@@ -67,6 +68,7 @@ export interface ExamSummary {
     flaggedIds: string[];
     answers: Record<string, string[]>;
     critiques: Record<string, string>;
+    timeSpent?: Record<string, number>;
     savedCount: number;
 }
 
@@ -123,7 +125,7 @@ export const loadHistory = () => readJSON<ExamSummary[]>(HISTORY_KEY) || [];
 
 export const saveSummary = (summary: ExamSummary, questions: ExamQuestion[]) => {
     // Keep the per-question detail only for the most recent result to stay well under storage limits
-    const slim = { ...summary, answers: {}, critiques: {} };
+    const slim = { ...summary, answers: {}, critiques: {}, timeSpent: {} };
     writeJSON(HISTORY_KEY, [slim, ...loadHistory()].slice(0, 30));
     writeJSON(LAST_RESULT_KEY, { summary, questions });
 };

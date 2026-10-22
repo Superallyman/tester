@@ -100,6 +100,7 @@ export default function PracticeExamPage() {
                 phase: 'exam',
                 reviewQueue: null,
                 colorScheme: 'default',
+                timeSpent: {},
             };
             saveExamQuestions(questions);
             saveExamState(state);
@@ -165,6 +166,7 @@ export default function PracticeExamPage() {
             flaggedIds: state.flags,
             answers: state.answers,
             critiques: state.critiques,
+            timeSpent: state.timeSpent || {},
             savedCount,
         };
 

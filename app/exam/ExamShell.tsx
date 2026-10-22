@@ -219,11 +219,16 @@ export default function ExamShell({ questions, initialState, candidateName, onFi
     useEffect(() => {
         if (paused || dialog === 'timeUp') return;
         const t = setInterval(() => {
-            setState(s => ({
-                ...s,
-                elapsedSec: s.elapsedSec + 1,
-                remainingSec: s.remainingSec === null ? null : Math.max(0, s.remainingSec - 1),
-            }));
+            setState(s => {
+                const onItem = s.phase === 'exam' ? s.questionIds[s.current] : null;
+                const timeSpent = onItem ? { ...s.timeSpent, [onItem]: (s.timeSpent?.[onItem] || 0) + 1 } : s.timeSpent;
+                return {
+                    ...s,
+                    elapsedSec: s.elapsedSec + 1,
+                    remainingSec: s.remainingSec === null ? null : Math.max(0, s.remainingSec - 1),
+                    timeSpent,
+                };
+            });
         }, 1000);
         return () => clearInterval(t);
     }, [paused, dialog]);
