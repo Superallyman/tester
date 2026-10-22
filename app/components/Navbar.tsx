@@ -19,6 +19,7 @@ const LINKS = [
   { href: "/exam", label: "Practice Exam" },
   { href: "/data", label: "Performance Analytics" },
   { href: "/history", label: "History" },
+  { href: "/leaderboard", label: "Leaderboard" },
 ];
 
 function AuthButton() {
