@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import QuestionSelector from './components/QuestionSelector';
 import QuizEngine from './components/QuizEngine';
+import SmartReview from './components/SmartReview';
 import { PENDING_QUIZ_KEY } from './exam/examUtils';
 
 export default function PracticePage() {
@@ -26,6 +27,7 @@ export default function PracticePage() {
       {/* 1. The Brain */}
       {activeQuestionIds.length == 0 ? (
         <div>
+          <SmartReview onQuestionsFound={(ids) => setActiveQuestionIds(ids)} />
           <h1>Test Customizer</h1>
           <QuestionSelector onQuestionsFound={(ids) => setActiveQuestionIds(ids)} />
         </div>
