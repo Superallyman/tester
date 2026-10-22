@@ -19,7 +19,6 @@ interface QuizEngineProps {
     questionIds: string[];
 }
 
-// Fixed Error: Specified the type for RatingPicker props
 interface RatingPickerProps {
     current: number | undefined;
     onSelect: (val: number | undefined) => void;
@@ -37,14 +36,6 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
     const [hasSubmitted, setHasSubmitted] = useState(false);
     const [seconds, setSeconds] = useState(0);
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-    // Helper to decode HTML entities safely
-    // const decodeHTML = (html: string) => {
-    //     if (typeof window === 'undefined') return html;
-    //     const txt = document.createElement("textarea");
-    //     txt.innerHTML = html;
-    //     return txt.value;
-    // };
 
     const formatTime = (totalSeconds: number) => {
         const mins = Math.floor(totalSeconds / 60);
@@ -201,17 +192,6 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
         </div>
     );
 
-    const getOptionStyle = (q: Question, opt: string): React.CSSProperties => {
-        const selected = userSelections[q.id] || [];
-        const isSelected = selected.includes(opt);
-        if (!hasSubmitted) return { backgroundColor: isSelected ? '#444' : 'transparent', border: '1px solid #444' };
-        const isCorrect = q.correct_answers.includes(opt);
-        if (isSelected && isCorrect) return { backgroundColor: '#10b98133', border: '1px solid #10b981', color: '#10b981' };
-        if (isSelected && !isCorrect) return { backgroundColor: '#ef444433', border: '1px solid #ef4444', color: '#ef4444' };
-        if (!isSelected && isCorrect) return { backgroundColor: '#3b82f633', border: '1px solid #3b82f6', color: '#3b82f6' };
-        return { opacity: 0.5, border: '1px solid #222' };
-    };
-
     return (
         <div style={{ color: 'inherit' }}>
             <div style={{ textAlign: 'right', marginBottom: '1rem', fontWeight: 'bold', opacity: 0.8 }}>⏱️ {formatTime(seconds)}</div>
@@ -245,13 +225,61 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
 
                         <h3 style={{ marginTop: 0, lineHeight: 1.4 }}>{idx + 1}. {q.question_text}</h3>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '15px' }}>
-                            {q.options.map((opt, optIdx) => (
-                                <button key={optIdx} onClick={() => toggleOption(q.id, opt)} disabled={hasSubmitted}
-                                    style={{ padding: '12px', textAlign: 'left', borderRadius: '8px', color: 'inherit', cursor: hasSubmitted ? 'default' : 'pointer', ...getOptionStyle(q, opt) }}>
-                                    {opt}
-                                </button>
-                            ))}
+                        <div style={{ display: 'grid', gap: '8px', marginTop: '15px' }}>
+                            {q.options.map((opt, optIdx) => {
+                                const wasSelected = selected.includes(opt);
+                                const isOptCorrect = q.correct_answers.includes(opt);
+
+                                if (!hasSubmitted) {
+                                    return (
+                                        <button
+                                            key={optIdx}
+                                            onClick={() => toggleOption(q.id, opt)}
+                                            style={{
+                                                padding: '12px',
+                                                textAlign: 'left',
+                                                borderRadius: '8px',
+                                                color: 'inherit',
+                                                cursor: 'pointer',
+                                                backgroundColor: wasSelected ? '#444' : 'transparent',
+                                                border: '1px solid #444'
+                                            }}
+                                        >
+                                            {opt}
+                                        </button>
+                                    );
+                                }
+
+                                return (
+                                    <div
+                                        key={optIdx}
+                                        style={{
+                                            padding: '12px',
+                                            borderRadius: '8px',
+                                            fontSize: '0.85rem',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            border: '1px solid rgba(128,128,128,0.2)',
+                                            background: 'transparent',
+                                        }}
+                                    >
+                                        <span>{opt}</span>
+                                        <span style={{
+                                            fontSize: '1.1rem',
+                                            fontWeight: 'bold',
+                                            marginLeft: '12px',
+                                            color: isOptCorrect
+                                                ? (wasSelected ? '#10b981' : '#3b82f6')
+                                                : (wasSelected ? '#ef4444' : 'transparent'),
+                                        }}>
+                                            {isOptCorrect
+                                                ? (wasSelected ? '✓' : '—')
+                                                : (wasSelected ? '✕' : '')}
+                                        </span>
+                                    </div>
+                                );
+                            })}
                         </div>
 
                         {hasSubmitted && (

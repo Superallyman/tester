@@ -345,13 +345,33 @@ export default function HistoryPage() {
                                 const decodedOpt = decodeHTML(opt);
                                 const wasSelected = item.submitted_answer?.includes(opt);
                                 const isCorrect = item.questions.correct_answers.includes(opt);
+
                                 return (
-                                    <div key={idx} style={{
-                                        padding: '12px', borderRadius: '8px', fontSize: '0.85rem',
-                                        border: `1px solid ${!wasSelected && isCorrect ? '#3b82f6' : 'rgba(128,128,128,0.2)'}`,
-                                        background: wasSelected ? (isCorrect ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)') : 'transparent'
-                                    }}>
-                                        {decodedOpt} {wasSelected && <span style={{ fontSize: '0.7rem', color: isCorrect ? '#10b981' : '#ef4444', marginLeft: '8px', fontWeight: 'bold' }}>● YOUR ANSWER</span>}
+                                    <div
+                                        key={idx}
+                                        style={{
+                                            padding: '12px',
+                                            borderRadius: '8px',
+                                            fontSize: '0.85rem',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                        }}
+                                    >
+                                        <span>{decodedOpt}</span>
+
+                                        <span style={{
+                                            fontSize: '1.1rem',
+                                            fontWeight: 'bold',
+                                            marginLeft: '12px',
+                                            color: isCorrect
+                                                ? (wasSelected ? '#10b981' : '#3b82f6')
+                                                : (wasSelected ? '#ef4444' : 'transparent'),
+                                        }}>
+                                            {isCorrect
+                                                ? (wasSelected ? '✓' : '—')
+                                                : (wasSelected ? '✕' : '')}
+                                        </span>
                                     </div>
                                 );
                             })}
