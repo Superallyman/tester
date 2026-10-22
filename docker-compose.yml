@@ -1,4 +1,6 @@
 version: "3.9"
+# Fixed project name so every checkout (master, creative-mode worktree) shares one database container and volume
+name: optotester
 services:
   next-tester:
     build:
@@ -11,6 +13,12 @@ services:
     container_name: next-tester
     env_file:
       - .env
+    environment:
+      # Inside the compose network the database is reached by service name, not 127.0.0.1
+      DATABASE_URL: postgresql://optotester:${POSTGRES_PASSWORD}@db:5432/optotester
+    depends_on:
+      db:
+        condition: service_healthy
     ports:
       - "3000:3000"
     restart: unless-stopped

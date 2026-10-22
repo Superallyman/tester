@@ -1,6 +1,7 @@
 # Local Postgres
 
 The app's database runs in the `db` service of `docker-compose.yml` (Postgres 17, bound to `127.0.0.1:5433`).
+The compose project is pinned to `optotester`, so master and the creative-mode worktree share the same container and volume.
 Browsers never talk to it: pages call the Next.js routes in `app/api/*`, which check the next-auth session
 and query Postgres through `server/db.ts`.
 

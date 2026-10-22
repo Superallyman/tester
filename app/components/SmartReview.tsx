@@ -25,7 +25,9 @@ interface Preset {
     color: string;
 }
 
-const SET_SIZE = 20;
+const DEFAULT_SET_SIZE = 20;
+const MAX_SET_SIZE = 500;
+const SIZE_KEY = 'smartReviewSize';
 const FADE_DAYS = 14;
 
 const shuffle = <T,>(arr: T[]) => {
@@ -45,6 +47,20 @@ export default function SmartReview({ onQuestionsFound }: SmartReviewProps) {
     const [presets, setPresets] = useState<Preset[] | null>(null);
     const [weakest, setWeakest] = useState<{ category: string; accuracy: number; attempts: number } | null>(null);
     const [loadingWeak, setLoadingWeak] = useState(false);
+    const [sizeInput, setSizeInput] = useState(String(DEFAULT_SET_SIZE));
+    const setSize = Math.min(MAX_SET_SIZE, Math.max(1, parseInt(sizeInput, 10) || DEFAULT_SET_SIZE));
+
+    useEffect(() => {
+        try {
+            const saved = localStorage.getItem(SIZE_KEY);
+            if (saved) setSizeInput(saved);
+        } catch { /* storage blocked: keep the default */ }
+    }, []);
+
+    const changeSize = (value: string) => {
+        setSizeInput(value);
+        try { localStorage.setItem(SIZE_KEY, value); } catch { /* ignore */ }
+    };
 
     useEffect(() => {
         if (!email) return;
@@ -106,7 +122,7 @@ export default function SmartReview({ onQuestionsFound }: SmartReviewProps) {
             const pool = questions
                 .filter(q => (q.category?.trim().replace(/\s+/g, ' ') || 'General') === weakest.category && !mastered.has(q.id))
                 .map(q => q.id);
-            if (pool.length) onQuestionsFound(shuffle(pool).slice(0, SET_SIZE));
+            if (pool.length) onQuestionsFound(shuffle(pool).slice(0, setSize));
         } finally {
             setLoadingWeak(false);
         }
@@ -128,13 +144,27 @@ export default function SmartReview({ onQuestionsFound }: SmartReviewProps) {
 
     return (
         <section style={{ marginBottom: '1.5rem' }}>
-            <h2 style={{ fontSize: '0.75rem', letterSpacing: '0.06em', opacity: 0.6, margin: '0 0 8px', fontWeight: 600 }}>SMART REVIEW</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+                <h2 style={{ fontSize: '0.75rem', letterSpacing: '0.06em', opacity: 0.6, margin: 0, fontWeight: 600 }}>QUICK SMART REVIEW</h2>
+                <label style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ opacity: 0.7 }}>Questions per set</span>
+                    <input
+                        type="number"
+                        min={1}
+                        max={MAX_SET_SIZE}
+                        value={sizeInput}
+                        onChange={e => changeSize(e.target.value)}
+                        onBlur={() => changeSize(String(setSize))}
+                        style={{ width: 64, padding: '4px 6px', borderRadius: 6, border: '1px solid rgba(128,128,128,0.4)', background: 'transparent', color: 'inherit', fontSize: '0.8rem' }}
+                    />
+                </label>
+            </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 8 }}>
                 {presets.map(p => (
                     <button
                         key={p.key}
                         disabled={p.ids.length === 0}
-                        onClick={() => onQuestionsFound(shuffle(p.ids).slice(0, SET_SIZE))}
+                        onClick={() => onQuestionsFound(shuffle(p.ids).slice(0, setSize))}
                         style={cardStyle(p.color, p.ids.length === 0)}
                     >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 6 }}>
@@ -154,7 +184,7 @@ export default function SmartReview({ onQuestionsFound }: SmartReviewProps) {
                     </button>
                 )}
             </div>
-            <p style={{ fontSize: '0.7rem', opacity: 0.5, margin: '6px 0 0' }}>Each set draws up to {SET_SIZE} random questions.</p>
+            <p style={{ fontSize: '0.7rem', opacity: 0.5, margin: '6px 0 0' }}>Each set draws up to {setSize} random questions.</p>
         </section>
     );
 }
