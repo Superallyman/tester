@@ -11,8 +11,9 @@ import ExamShell from './ExamShell';
 import ExamResults from './ExamResults';
 import {
     CategoryResult, ExamConfig, ExamQuestion, ExamState, ExamSummary, clearExam, isCorrect, loadExam,
-    loadLastResult, newExamId, saveExamQuestions, saveExamState, saveSummary, stratifiedSample,
+    loadLastResult, newExamId, saveExamQuestions, saveExamState, saveSummary,
 } from './examUtils';
+import { blueprintSample } from './blueprint';
 
 type Phase = 'setup' | 'exam' | 'results';
 
@@ -67,7 +68,7 @@ export default function PracticeExamPage() {
                 return;
             }
 
-            const ids = stratifiedSample(pool, config.count);
+            const ids = blueprintSample(pool, config.count);
             const rows = await fetchByIds<ExamQuestion>(ids, chunk => supabase.from('questions').select('*').in('id', chunk));
             const byId = new Map(rows.map(r => [r.id, r]));
             const questions: ExamQuestion[] = ids

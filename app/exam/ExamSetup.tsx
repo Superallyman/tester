@@ -6,6 +6,7 @@ import { supabase } from '@/utils/supabase';
 import {
     EXAM_PRESETS, ExamConfig, ExamSummary, ExamState, SECONDS_PER_ITEM, formatClock, loadHistory,
 } from './examUtils';
+import { BLUEPRINT, BLUEPRINT_SOURCE, SCORED_ITEMS, blueprintKey, blueprintQuotas } from './blueprint';
 
 export type PoolFilter = 'all' | 'unseen' | 'notMastered' | 'missed';
 
@@ -39,6 +40,7 @@ export default function ExamSetup({ signedIn, resumable, hasLastResult, busy, er
     const [categories, setCategories] = useState<{ name: string; count: number }[]>([]);
     const [selectedCats, setSelectedCats] = useState<string[]>([]);
     const [showCats, setShowCats] = useState(false);
+    const [showBlueprint, setShowBlueprint] = useState(false);
     const [history, setHistory] = useState<ExamSummary[]>([]);
 
     useEffect(() => {
@@ -58,6 +60,20 @@ export default function ExamSetup({ signedIn, resumable, hasLastResult, busy, er
     const count = chosen ? chosen.count : Math.max(1, Math.min(370, customCount));
     const timeLimitSec = !timed ? null : chosen ? chosen.timeLimitSec : Math.round((count * SECONDS_PER_ITEM) / 60) * 60;
     const label_ = chosen ? chosen.label : `Custom ${count}`;
+
+    // Preview of the exam's composition: supply comes from the bank (before the pool filter is applied)
+    const supply: Record<string, number> = {};
+    const bankByRow: Record<string, string[]> = {};
+    categories
+        .filter(c => !selectedCats.length || selectedCats.includes(c.name))
+        .forEach(c => {
+            const key = blueprintKey(c.name) ?? `other:${c.name}`;
+            supply[key] = (supply[key] || 0) + c.count;
+            (bankByRow[key] ||= []).push(c.name);
+        });
+    const quotas = categories.length ? blueprintQuotas(supply, count) : {};
+    const unmapped = Object.keys(supply).filter(k => k.startsWith('other:'));
+    const shortRows = BLUEPRINT.filter(r => supply[r.key] !== undefined && supply[r.key] < Math.round((r.weight / SCORED_ITEMS) * count));
 
     const toggleCat = (name: string) =>
         setSelectedCats(prev => (prev.includes(name) ? prev.filter(c => c !== name) : [...prev, name]));
@@ -131,7 +147,7 @@ export default function ExamSetup({ signedIn, resumable, hasLastResult, busy, er
                 <span style={label}>QUESTION POOL</span>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8 }}>
                     {([
-                        ['all', 'All questions', 'Representative mix of every category'],
+                        ['all', 'All questions', 'Every question in the bank'],
                         ['unseen', 'Unseen only', 'Questions you have never answered'],
                         ['notMastered', 'Not yet mastered', 'Never answered correctly (includes unseen)'],
                         ['missed', 'Previously missed', 'Answered before, never correctly'],
@@ -165,9 +181,78 @@ export default function ExamSetup({ signedIn, resumable, hasLastResult, busy, er
                         )}
                     </div>
                 )}
-                <p style={{ fontSize: '0.75rem', opacity: 0.6, margin: '10px 0 0' }}>
-                    Items are drawn in proportion to each category&apos;s size so the exam mirrors the bank, then shuffled.
-                </p>
+            </section>
+
+            <section style={{ ...card, marginBottom: '1.25rem', borderColor: 'rgba(16,185,129,0.5)', background: 'rgba(16,185,129,0.07)' }}>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                    <span style={{ fontSize: '1.2rem', lineHeight: 1, color: '#10b981' }}>✓</span>
+                    <div style={{ flex: 1 }}>
+                        <strong>Weighted to the official NBEO blueprint, not the question bank</strong>
+                        <p style={{ margin: '6px 0 0', fontSize: '0.88rem', opacity: 0.85, lineHeight: 1.5 }}>
+                            Each content area gets the share of items NBEO publishes for the real Part I ABS (the midpoint of its official range),
+                            so heavily stocked bank categories don&apos;t crowd out the rest. Source:{' '}
+                            <a href={BLUEPRINT_SOURCE.url} target="_blank" rel="noreferrer" style={{ color: '#3b82f6' }}>{BLUEPRINT_SOURCE.label}</a>.
+                            {selectedCats.length > 0 && ' With categories limited, the selected areas keep their relative NBEO weights.'}
+                        </p>
+                        <button
+                            onClick={() => setShowBlueprint(v => !v)}
+                            style={{ marginTop: 10, padding: 0, background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontSize: '0.88rem' }}
+                        >
+                            {showBlueprint ? '▼ Hide' : '▶ Show'} how {count} items are split
+                        </button>
+                    </div>
+                </div>
+
+                {showBlueprint && (
+                    <div style={{ overflowX: 'auto', marginTop: 10 }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                            <thead>
+                                <tr style={{ textAlign: 'left', opacity: 0.6, fontSize: '0.68rem', letterSpacing: '0.04em' }}>
+                                    <th style={{ padding: '6px 4px' }}>NBEO CONTENT AREA</th>
+                                    <th style={{ padding: '6px 4px', whiteSpace: 'nowrap' }}>OFFICIAL / {SCORED_ITEMS}</th>
+                                    <th style={{ padding: '6px 4px', whiteSpace: 'nowrap' }}>THIS EXAM</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {BLUEPRINT.map((r, i) => {
+                                    const groupStart = i === 0 || BLUEPRINT[i - 1].group !== r.group;
+                                    const n = quotas[r.key] || 0;
+                                    return (
+                                        <React.Fragment key={r.key}>
+                                            {groupStart && (
+                                                <tr><td colSpan={3} style={{ padding: '10px 4px 4px', fontWeight: 700, fontSize: '0.7rem', letterSpacing: '0.04em', opacity: 0.7 }}>{r.group.toUpperCase()}</td></tr>
+                                            )}
+                                            <tr style={{ borderTop: '1px solid rgba(128,128,128,0.15)', opacity: supply[r.key] ? 1 : 0.4 }}>
+                                                <td style={{ padding: '5px 4px' }}>
+                                                    {r.label}
+                                                    <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>Bank: {(bankByRow[r.key] || []).join(', ') || 'none'}</div>
+                                                </td>
+                                                <td style={{ padding: '5px 4px', whiteSpace: 'nowrap' }}>{r.min}–{r.max}</td>
+                                                <td style={{ padding: '5px 4px', fontWeight: 700 }}>{n}</td>
+                                            </tr>
+                                        </React.Fragment>
+                                    );
+                                })}
+                                {unmapped.map(k => (
+                                    <tr key={k} style={{ borderTop: '1px solid rgba(128,128,128,0.15)' }}>
+                                        <td style={{ padding: '5px 4px' }}>
+                                            Not in the NBEO matrix
+                                            <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>Bank: {k.slice(6)}</div>
+                                        </td>
+                                        <td style={{ padding: '5px 4px' }}>—</td>
+                                        <td style={{ padding: '5px 4px', fontWeight: 700 }}>{quotas[k] || 0}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                        <ul style={{ fontSize: '0.75rem', opacity: 0.7, margin: '10px 0 0', paddingLeft: 18, lineHeight: 1.6 }}>
+                            <li>NBEO tests pharmacology inside each condition; the bank files it separately, so &quot;Pharmacology&quot; gets the official Pharmacology column (11–17%, ~49 of 350) and the health rows shrink proportionally.</li>
+                            <li>Biochem and Microbiology questions are basic science on systemic conditions, so they share the Systemic Health slot.</li>
+                            {shortRows.length > 0 && <li>The bank is short on {shortRows.map(r => r.label).join(', ')}; the missing items are redistributed by NBEO weight.</li>}
+                            {filter !== 'all' && <li>Your pool filter is applied when the exam is built, so final counts can shift where few questions remain.</li>}
+                        </ul>
+                    </div>
+                )}
             </section>
 
             <section style={{ ...card, marginBottom: '1.25rem' }}>

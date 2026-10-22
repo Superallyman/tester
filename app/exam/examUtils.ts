@@ -165,29 +165,6 @@ export const shuffle = <T,>(arr: T[]) => {
 
 // Pick `count` ids so each category is represented in proportion to its share of the pool,
 // the way a real form is built from a content matrix rather than pure random draw.
-export const stratifiedSample = (pool: { id: string; category: string }[], count: number) => {
-    if (pool.length <= count) return shuffle(pool.map(p => p.id));
-
-    const byCat: Record<string, string[]> = {};
-    pool.forEach(p => {
-        const cat = p.category?.trim() || 'General';
-        (byCat[cat] ||= []).push(p.id);
-    });
-
-    const cats = Object.keys(byCat);
-    const quotas = cats.map(cat => {
-        const exact = (byCat[cat].length / pool.length) * count;
-        return { cat, base: Math.floor(exact), frac: exact - Math.floor(exact) };
-    });
-    let remaining = count - quotas.reduce((sum, q) => sum + q.base, 0);
-    quotas.sort((a, b) => b.frac - a.frac).forEach(q => {
-        if (remaining > 0) { q.base++; remaining--; }
-    });
-
-    const picked = quotas.flatMap(q => shuffle(byCat[q.cat]).slice(0, q.base));
-    return shuffle(picked);
-};
-
 export const newExamId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 
 export const LETTERS = 'ABCDEFGHIJKLMNOP';
