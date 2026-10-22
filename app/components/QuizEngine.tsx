@@ -5,6 +5,7 @@ import { supabase } from '@/utils/supabase';
 import { useSession } from "next-auth/react";
 
 import { smartClean } from '@/utils/formatters';
+import { fetchByIds } from '@/utils/fetchAll';
 
 interface Question {
     id: string;
@@ -60,7 +61,8 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
     useEffect(() => {
         async function fetchQuestions() {
             if (questionIds.length === 0) return;
-            const { data } = await supabase.from('questions').select(`*`).in('id', questionIds);
+            // Batched: long id lists (e.g. drilling a practice exam's misses) overflow a single request URL
+            const data = await fetchByIds<Question>(questionIds, chunk => supabase.from('questions').select(`*`).in('id', chunk)).catch(() => null);
             if (data) {
                 const sortedData = questionIds
                     .map(id => data.find(q => q.id === id))

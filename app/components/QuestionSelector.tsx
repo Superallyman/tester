@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/utils/supabase';
 import { useSession } from "next-auth/react";
+import { fetchAll } from '@/utils/fetchAll';
 
 interface QuestionSelectorProps {
     onQuestionsFound: (ids: string[]) => void;
@@ -136,11 +137,11 @@ export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorP
         const userEmail = session?.user?.email || "anonymous";
 
         try {
-            const { data: activityData } = await supabase.from('user_activity')
-                .select('question_id, is_correct, user_rating').eq('user_email', userEmail);
+            const activityData = await fetchAll<{ question_id: string; is_correct: boolean; user_rating: number | null }>(() =>
+                supabase.from('user_activity').select('question_id, is_correct, user_rating').eq('user_email', userEmail).order('id'));
 
             const statsByQuestion: Record<string, QuestionStat> = {};
-            activityData?.forEach(a => {
+            activityData.forEach(a => {
                 if (!statsByQuestion[a.question_id]) {
                     statsByQuestion[a.question_id] = { totalRating: 0, count: 0, mastered: false };
                 }
@@ -149,22 +150,23 @@ export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorP
                 if (a.is_correct) statsByQuestion[a.question_id].mastered = true;
             });
 
-            let finalQuery = supabase.from('questions').select('id');
-
-            if (hasPhraseFilters) {
-                if (currentPoolIds.length === 0) {
-                    setNoResults(true);
-                    setLoading(false);
-                    return;
-                }
-                finalQuery = finalQuery.in('id', currentPoolIds);
-            } else if (hasCategoryFilters) {
-                const targetCats = includedCats.length > 0 ? includedCats : availableCategories.filter(c => !excludedCats.includes(c));
-                finalQuery = finalQuery.in('category', targetCats);
+            if (hasPhraseFilters && currentPoolIds.length === 0) {
+                setNoResults(true);
+                setLoading(false);
+                return;
             }
 
-            const { data: baseQuestions, error } = await finalQuery;
-            if (error) throw error;
+            // Paged so the pool covers the whole bank, not just the first 1000 rows
+            const baseQuestions = await fetchAll<{ id: string }>(() => {
+                let finalQuery = supabase.from('questions').select('id').order('id');
+                if (hasPhraseFilters) {
+                    finalQuery = finalQuery.in('id', currentPoolIds);
+                } else if (hasCategoryFilters) {
+                    const targetCats = includedCats.length > 0 ? includedCats : availableCategories.filter(c => !excludedCats.includes(c));
+                    finalQuery = finalQuery.in('category', targetCats);
+                }
+                return finalQuery;
+            });
 
             const filtered = (baseQuestions || []).filter(q => {
                 const stats = statsByQuestion[q.id];

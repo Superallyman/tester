@@ -432,7 +432,7 @@ export default function ExamShell({ questions, initialState, candidateName, onFi
 
     const header = (
         <div className={styles.titleBar}>
-            <div className={styles.title}>NBEO Part I ABS Practice Exam - {candidateName}</div>
+            <div className={styles.title}>NBEO Part I ABS<span className={styles.titleExtra}> Practice Exam - {candidateName}</span></div>
             <div className={styles.meta}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                     <button className={styles.metaButton} onClick={() => setPaused(true)} title="Pause exam">

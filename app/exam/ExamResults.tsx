@@ -127,7 +127,7 @@ export default function ExamResults({ summary, questions, onNewExam }: ExamResul
 
             <section style={{ ...card, marginBottom: '1.25rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
-                    <h2 style={{ fontSize: '1.05rem', margin: 0 }}>By category</h2>
+                    <h2 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0 }}>By category</h2>
                     {category && <button onClick={() => setCategory(null)} style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontSize: '0.85rem' }}>Clear filter</button>}
                 </div>
                 <div style={{ display: 'grid', gap: 6 }}>

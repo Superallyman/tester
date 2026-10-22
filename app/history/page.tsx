@@ -12,7 +12,7 @@ interface HistoryItem {
     attempted_at: string;
     updated_at: string;
     is_correct: boolean;
-    user_rating: number;
+    user_rating: number | null;
     satisfaction_rating: number | null;
     submitted_answer: string[];
     questions: {
@@ -313,7 +313,7 @@ export default function HistoryPage() {
                             <div style={{ textAlign: 'right', display: 'flex', gap: '15px', alignItems: 'center' }}>
                                 <div>
                                     <label style={{ display: 'block', fontSize: '0.6rem', opacity: 0.6, marginBottom: '4px', fontWeight: 'bold' }}>CONFIDENCE</label>
-                                    <span style={{ fontWeight: 'bold', color: '#3b82f6' }}>{item.user_rating}/10</span>
+                                    <span style={{ fontWeight: 'bold', color: '#3b82f6' }}>{item.user_rating ?? '—'}/10</span>
                                 </div>
                                 <div>
                                     <label style={{ display: 'block', fontSize: '0.6rem', opacity: 0.6, marginBottom: '4px', fontWeight: 'bold' }}>SATISFACTION</label>

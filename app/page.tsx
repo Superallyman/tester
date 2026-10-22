@@ -1,14 +1,27 @@
 "use client"
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import QuestionSelector from './components/QuestionSelector';
 import QuizEngine from './components/QuizEngine';
+import { PENDING_QUIZ_KEY } from './exam/examUtils';
 
 export default function PracticePage() {
   const [activeQuestionIds, setActiveQuestionIds] = useState<string[]>([]);
 
+  // Other pages (e.g. practice exam results) can hand off a set of questions to drill here
+  useEffect(() => {
+    try {
+      const pending = sessionStorage.getItem(PENDING_QUIZ_KEY);
+      if (pending) {
+        sessionStorage.removeItem(PENDING_QUIZ_KEY);
+        const ids = JSON.parse(pending);
+        if (Array.isArray(ids) && ids.length) setActiveQuestionIds(ids);
+      }
+    } catch { /* storage unavailable */ }
+  }, []);
+
   return (
-    <main style={{ maxWidth: '800px', margin: '0 auto', padding: '2rem' }}>
+    <main style={{ maxWidth: '800px', margin: '0 auto', padding: '2rem 1rem' }}>
 
       {/* 1. The Brain */}
       {activeQuestionIds.length == 0 ? (

@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/utils/supabase';
 import { useSession } from "next-auth/react";
+import { fetchAll } from '@/utils/fetchAll';
 
 // --- Types & Interfaces ---
 type SortType = 'alpha' | 'worst' | 'best' | 'urgency' | 'mastery' | 'frustration';
@@ -37,7 +38,7 @@ interface AnalyticsStats {
 
 interface UserActivityEntry {
   is_correct: boolean;
-  user_rating: number;
+  user_rating: number | null;
   satisfaction_rating: number | null;
   attempted_at: string;
   question_id: string;
@@ -50,6 +51,7 @@ interface CategoryMapEntry {
   sumRating: number;
   sumSatisfaction: number;
   satCount: number;
+  ratingCount: number;
   seenIds: Set<string>;
   masteredIds: Set<string>;
   latestTimestamp: number;
@@ -105,13 +107,17 @@ export default function AnalyticsPage() {
       if (!categoryMap[cat]) {
         categoryMap[cat] = {
           total: 0, correct: 0, sumRating: 0, sumSatisfaction: 0,
-          satCount: 0, seenIds: new Set(), masteredIds: new Set(),
+          satCount: 0, ratingCount: 0, seenIds: new Set(), masteredIds: new Set(),
           latestTimestamp: 0
         };
       }
 
       categoryMap[cat].total++;
-      categoryMap[cat].sumRating += (entry.user_rating || 0);
+      // Practice-exam rows have no confidence rating; only average the rated attempts
+      if (entry.user_rating !== null) {
+        categoryMap[cat].sumRating += entry.user_rating;
+        categoryMap[cat].ratingCount++;
+      }
 
       if (timestamp > categoryMap[cat].latestTimestamp) {
         categoryMap[cat].latestTimestamp = timestamp;
@@ -141,7 +147,7 @@ export default function AnalyticsPage() {
 
     const categories: CategoryStat[] = Object.entries(categoryMap).map(([name, d]) => {
       const accuracy = (d.correct / d.total) * 100;
-      const avgRating = d.sumRating / d.total;
+      const avgRating = d.ratingCount > 0 ? d.sumRating / d.ratingCount : 0;
       const avgSatisfaction = d.satCount > 0 ? d.sumSatisfaction / d.satCount : 0;
       const seenCount = d.seenIds.size;
       const masteredCount = d.masteredIds.size;
@@ -181,19 +187,21 @@ export default function AnalyticsPage() {
         totalPerCat[normalized] = Number(item.q_count);
       });
 
-      const { data: activity, error: activityErr } = await supabase
-        .from('user_activity')
-        .select(`
-          is_correct, user_rating, satisfaction_rating, attempted_at, question_id,
-          questions (category)
-        `)
-        .eq('user_email', session.user.email)
-        .order('attempted_at', { ascending: false });
-
-      if (activityErr) console.error(activityErr);
-
-      if (activity) {
-        processAnalytics(activity as unknown as UserActivityEntry[], totalPerCat);
+      const email = session.user.email;
+      try {
+        // Paged: a plain select stops at 1000 rows, which one or two full practice exams can exceed
+        const activity = await fetchAll<UserActivityEntry>(() => supabase
+          .from('user_activity')
+          .select(`
+            is_correct, user_rating, satisfaction_rating, attempted_at, question_id,
+            questions (category)
+          `)
+          .eq('user_email', email)
+          .order('attempted_at', { ascending: false })
+          .order('id'));
+        processAnalytics(activity, totalPerCat);
+      } catch (activityErr) {
+        console.error(activityErr);
       }
       setLoading(false);
     }

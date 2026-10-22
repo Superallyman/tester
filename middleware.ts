@@ -13,8 +13,9 @@ export async function middleware(request: NextRequest) {
   // Get the pathname of the request
   const path = request.nextUrl.pathname;
 
-  // Allow all non-homepage requests
-  if (path !== "/" && path !== "/api/questions") {
+  // Only the quiz/exam entry points and the questions API require an allowed user
+  const gated = path === "/" || path === "/api/questions" || path === "/exam";
+  if (!gated) {
     return NextResponse.next();
   }
 
@@ -35,5 +36,5 @@ export async function middleware(request: NextRequest) {
 
 // Configure on which paths to run the middleware
 export const config = {
-  matcher: ["/", "/api/:path*"],
+  matcher: ["/", "/exam", "/api/:path*"],
 };

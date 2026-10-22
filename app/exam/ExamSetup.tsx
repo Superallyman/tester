@@ -76,8 +76,8 @@ export default function ExamSetup({ signedIn, resumable, hasLastResult, busy, er
 
     return (
         <main style={{ maxWidth: '860px', margin: '0 auto', padding: '1.5rem 1rem 3rem' }}>
-            <h1 style={{ marginBottom: 4 }}>NBEO Part I ABS Practice Exam</h1>
-            <p style={{ opacity: 0.7, marginTop: 0, fontSize: '0.95rem' }}>
+            <h1 style={{ margin: '0 0 6px', fontSize: '1.7rem', fontWeight: 700 }}>NBEO Part I ABS Practice Exam</h1>
+            <p style={{ opacity: 0.7, margin: '0 0 1.25rem', fontSize: '0.95rem' }}>
                 Simulates the Pearson VUE testing interface used on exam day: timed session, Flag for Review, Navigator,
                 Highlight / Strikethrough, scientific calculator, My Notes, Drug List and the end-of-session Review screen.
             </p>
@@ -204,7 +204,7 @@ export default function ExamSetup({ signedIn, resumable, hasLastResult, busy, er
             {(history.length > 0 || hasLastResult) && (
                 <section style={{ marginTop: '1.75rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <h2 style={{ fontSize: '1.1rem', margin: 0 }}>Past exams on this device</h2>
+                        <h2 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>Past exams on this device</h2>
                         {hasLastResult && <button onClick={onViewLastResult} style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontSize: '0.9rem' }}>View last result →</button>}
                     </div>
                     <div style={{ overflowX: 'auto' }}>
