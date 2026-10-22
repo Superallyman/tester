@@ -1,0 +1,243 @@
+"use client"
+
+import React, { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+
+import { ExamQuestion, ExamSummary, LETTERS, PENDING_QUIZ_KEY, formatClock, isCorrect } from './examUtils';
+
+interface ExamResultsProps {
+    summary: ExamSummary;
+    questions: ExamQuestion[];
+    onNewExam: () => void;
+}
+
+type ItemFilter = 'incorrect' | 'all' | 'flagged' | 'unanswered' | 'critiqued';
+
+const card: React.CSSProperties = {
+    padding: '1.25rem',
+    border: '1px solid rgba(128,128,128,0.2)',
+    borderRadius: '12px',
+    background: 'rgba(128,128,128,0.05)',
+};
+
+const scoreColor = (pct: number) => (pct >= 70 ? '#10b981' : pct >= 55 ? '#f59e0b' : '#ef4444');
+
+function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
+    return (
+        <div style={{ ...card, padding: '0.9rem 1rem' }}>
+            <div style={{ fontSize: '0.65rem', opacity: 0.6, letterSpacing: '0.05em' }}>{label}</div>
+            <div style={{ fontSize: '1.4rem', fontWeight: 700, marginTop: 2 }}>{value}</div>
+            {sub && <div style={{ fontSize: '0.75rem', opacity: 0.65, marginTop: 2 }}>{sub}</div>}
+        </div>
+    );
+}
+
+export default function ExamResults({ summary, questions, onNewExam }: ExamResultsProps) {
+    const router = useRouter();
+    const [filter, setFilter] = useState<ItemFilter>(summary.incorrectIds.length ? 'incorrect' : 'all');
+    const [category, setCategory] = useState<string | null>(null);
+    const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+
+    const pct = summary.total ? (summary.correct / summary.total) * 100 : 0;
+    const answeredPct = summary.answered ? (summary.correct / summary.answered) * 100 : 0;
+    const secPerItem = summary.answered ? summary.elapsedSec / summary.answered : 0;
+
+    const breakdown = useMemo(() =>
+        Object.entries(summary.byCategory)
+            .map(([cat, r]) => ({ cat, ...r, pct: r.total ? (r.correct / r.total) * 100 : 0 }))
+            .sort((a, b) => a.pct - b.pct || b.total - a.total),
+    [summary.byCategory]);
+
+    const insights = useMemo(() => {
+        const single = questions.filter(q => q.correct_answers.length <= 1);
+        const multi = questions.filter(q => q.correct_answers.length > 1);
+        const flagged = questions.filter(q => summary.flaggedIds.includes(q.id));
+        const rate = (list: ExamQuestion[]) => list.length ? list.filter(q => isCorrect(q, summary.answers[q.id])).length : 0;
+        return {
+            single: { correct: rate(single), total: single.length },
+            multi: { correct: rate(multi), total: multi.length },
+            flagged: { correct: rate(flagged), total: flagged.length },
+        };
+    }, [questions, summary]);
+
+    const items = questions.filter(q => {
+        if (category && (q.category?.trim() || 'General') !== category) return false;
+        const sel = summary.answers[q.id] || [];
+        if (filter === 'incorrect') return !isCorrect(q, sel);
+        if (filter === 'flagged') return summary.flaggedIds.includes(q.id);
+        if (filter === 'unanswered') return sel.length === 0;
+        if (filter === 'critiqued') return !!summary.critiques[q.id];
+        return true;
+    });
+
+    const counts: Record<ItemFilter, number> = {
+        incorrect: summary.incorrectIds.length,
+        all: questions.length,
+        flagged: summary.flaggedIds.length,
+        unanswered: questions.filter(q => !(summary.answers[q.id] || []).length).length,
+        critiqued: Object.keys(summary.critiques).length,
+    };
+
+    const drillMissed = () => {
+        try { sessionStorage.setItem(PENDING_QUIZ_KEY, JSON.stringify(summary.incorrectIds)); } catch { /* ignore */ }
+        router.push('/');
+    };
+
+    return (
+        <main style={{ maxWidth: '900px', margin: '0 auto', padding: '1.5rem 1rem 3rem' }}>
+            <div style={{ ...card, borderColor: '#006daa', textAlign: 'center', marginBottom: '1.25rem' }}>
+                <div style={{ fontSize: '0.75rem', opacity: 0.7, letterSpacing: '0.05em' }}>NBEO PART I ABS PRACTICE · {summary.label.toUpperCase()}</div>
+                <div style={{ fontSize: '3rem', fontWeight: 800, color: scoreColor(pct), lineHeight: 1.1, margin: '8px 0' }}>{pct.toFixed(1)}%</div>
+                <div style={{ fontSize: '1rem' }}>{summary.correct} of {summary.total} correct</div>
+                <div style={{ background: 'rgba(128,128,128,0.2)', height: 8, borderRadius: 10, overflow: 'hidden', margin: '14px auto 0', maxWidth: 480 }}>
+                    <div style={{ background: scoreColor(pct), height: '100%', width: `${pct}%` }} />
+                </div>
+                <p style={{ fontSize: '0.75rem', opacity: 0.6, margin: '12px 0 0' }}>
+                    NBEO reports a scaled score, so this raw percentage is a practice gauge, not a predicted board score.
+                </p>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10, marginBottom: '1.25rem' }}>
+                <Stat label="ANSWERED" value={`${summary.answered}/${summary.total}`} sub={summary.answered < summary.total ? `${summary.total - summary.answered} left blank` : 'none left blank'} />
+                <Stat label="ACCURACY ON ANSWERED" value={`${answeredPct.toFixed(0)}%`} />
+                <Stat
+                    label="TIME USED"
+                    value={formatClock(summary.elapsedSec)}
+                    sub={summary.timeLimitSec ? `of ${formatClock(summary.timeLimitSec)} allowed` : 'untimed'}
+                />
+                <Stat label="PACE" value={`${Math.round(secPerItem)}s / item`} sub={secPerItem > 78 ? 'slower than exam pace (78s)' : 'within exam pace (78s)'} />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10, marginBottom: '1.25rem' }}>
+                {insights.multi.total > 0 && (
+                    <Stat label="SINGLE-ANSWER ITEMS" value={`${insights.single.correct}/${insights.single.total}`} sub={`${insights.single.total ? ((insights.single.correct / insights.single.total) * 100).toFixed(0) : 0}% correct`} />
+                )}
+                {insights.multi.total > 0 && (
+                    <Stat label="MULTIPLE-RESPONSE ITEMS" value={`${insights.multi.correct}/${insights.multi.total}`} sub="all-or-nothing scoring" />
+                )}
+                {insights.flagged.total > 0 && (
+                    <Stat label="FLAGGED ITEMS" value={`${insights.flagged.correct}/${insights.flagged.total}`} sub="how your second-guesses turned out" />
+                )}
+                <Stat
+                    label="SAVED TO HISTORY"
+                    value={summary.savedCount ? `${summary.savedCount} items` : '—'}
+                    sub={summary.savedCount ? 'blank items stay "unseen"' : 'not saved'}
+                />
+            </div>
+
+            <section style={{ ...card, marginBottom: '1.25rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
+                    <h2 style={{ fontSize: '1.05rem', margin: 0 }}>By category</h2>
+                    {category && <button onClick={() => setCategory(null)} style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontSize: '0.85rem' }}>Clear filter</button>}
+                </div>
+                <div style={{ display: 'grid', gap: 6 }}>
+                    {breakdown.map(b => (
+                        <button
+                            key={b.cat}
+                            onClick={() => { setCategory(category === b.cat ? null : b.cat); setFilter('all'); }}
+                            style={{
+                                display: 'grid', gridTemplateColumns: 'minmax(0, 1.4fr) minmax(60px, 1fr) 70px', gap: 10, alignItems: 'center',
+                                background: category === b.cat ? 'rgba(0,112,243,0.12)' : 'transparent', border: 'none', color: 'inherit',
+                                padding: '4px 6px', borderRadius: 6, cursor: 'pointer', textAlign: 'left', fontSize: '0.85rem',
+                            }}
+                        >
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={b.cat}>{b.cat}</span>
+                            <span style={{ background: 'rgba(128,128,128,0.2)', height: 8, borderRadius: 8, overflow: 'hidden' }}>
+                                <span style={{ display: 'block', background: scoreColor(b.pct), height: '100%', width: `${b.pct}%` }} />
+                            </span>
+                            <span style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{b.correct}/{b.total}</span>
+                        </button>
+                    ))}
+                </div>
+            </section>
+
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: '1.25rem' }}>
+                {summary.incorrectIds.length > 0 && (
+                    <button onClick={drillMissed} style={{ flex: '1 1 220px', padding: 14, background: '#0070f3', color: 'white', border: 'none', borderRadius: 8, fontWeight: 'bold', cursor: 'pointer' }}>
+                        Drill the {summary.incorrectIds.length} missed items in Quick Test
+                    </button>
+                )}
+                <button onClick={onNewExam} style={{ flex: '1 1 220px', padding: 14, background: '#006daa', color: 'white', border: 'none', borderRadius: 8, fontWeight: 'bold', cursor: 'pointer' }}>
+                    New Practice Exam
+                </button>
+            </div>
+
+            <section>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+                    {(['incorrect', 'all', 'flagged', 'unanswered', 'critiqued'] as ItemFilter[]).filter(f => f === 'all' || counts[f] > 0).map(f => (
+                        <button
+                            key={f}
+                            onClick={() => setFilter(f)}
+                            style={{
+                                padding: '6px 12px', borderRadius: 16, cursor: 'pointer', fontSize: '0.8rem',
+                                border: `1px solid ${filter === f ? '#0070f3' : 'rgba(128,128,128,0.3)'}`,
+                                background: filter === f ? '#0070f3' : 'transparent', color: filter === f ? 'white' : 'inherit',
+                            }}
+                        >
+                            {f[0].toUpperCase() + f.slice(1)} ({counts[f]})
+                        </button>
+                    ))}
+                    {category && <span style={{ fontSize: '0.8rem', alignSelf: 'center', opacity: 0.7 }}>in {category}</span>}
+                </div>
+
+                {items.length === 0 && <p style={{ opacity: 0.6, textAlign: 'center' }}>Nothing here.</p>}
+
+                {items.map(q => {
+                    const idx = questions.indexOf(q);
+                    const sel = summary.answers[q.id] || [];
+                    const ok = isCorrect(q, sel);
+                    const open = expanded[q.id] ?? filter === 'incorrect';
+                    return (
+                        <article key={q.id} style={{ ...card, marginBottom: 10, padding: '1rem 1.1rem' }}>
+                            <button
+                                onClick={() => setExpanded(e => ({ ...e, [q.id]: !open }))}
+                                style={{ display: 'flex', gap: 10, width: '100%', background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', textAlign: 'left', padding: 0 }}
+                            >
+                                <span style={{ fontWeight: 700, color: sel.length === 0 ? '#9ca3af' : ok ? '#10b981' : '#ef4444', minWidth: 52 }}>
+                                    #{idx + 1} {sel.length === 0 ? '—' : ok ? '✓' : '✕'}
+                                </span>
+                                <span style={{ flex: 1, lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: open ? 'unset' : 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                    {q.question_text}
+                                </span>
+                                {summary.flaggedIds.includes(q.id) && <span title="Flagged" style={{ color: '#f59e0b' }}>⚑</span>}
+                            </button>
+                            {open && (
+                                <div style={{ marginTop: 12 }}>
+                                    <div style={{ fontSize: '0.7rem', opacity: 0.6, marginBottom: 8 }}>{q.category}</div>
+                                    <div style={{ display: 'grid', gap: 6 }}>
+                                        {q.options.map((opt, i) => {
+                                            const picked = sel.includes(opt);
+                                            const right = q.correct_answers.includes(opt);
+                                            return (
+                                                <div key={i} style={{
+                                                    display: 'flex', justifyContent: 'space-between', gap: 10, padding: '8px 10px', borderRadius: 8, fontSize: '0.88rem',
+                                                    border: `1px solid ${right ? 'rgba(16,185,129,0.5)' : picked ? 'rgba(239,68,68,0.5)' : 'rgba(128,128,128,0.2)'}`,
+                                                    background: right ? 'rgba(16,185,129,0.08)' : picked ? 'rgba(239,68,68,0.08)' : 'transparent',
+                                                }}>
+                                                    <span><strong>{LETTERS[i]}.</strong> {opt}</span>
+                                                    <span style={{ fontWeight: 700, color: right ? (picked ? '#10b981' : '#3b82f6') : '#ef4444' }}>
+                                                        {right ? (picked ? '✓' : 'answer') : picked ? '✕' : ''}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    {q.explanation && (
+                                        <div style={{ background: 'rgba(59,130,246,0.1)', padding: 12, borderRadius: 8, fontSize: '0.88rem', marginTop: 12, borderLeft: '4px solid #3b82f6', whiteSpace: 'pre-wrap' }}>
+                                            <strong style={{ color: '#3b82f6' }}>Explanation:</strong> {q.explanation}
+                                        </div>
+                                    )}
+                                    {summary.critiques[q.id] && (
+                                        <div style={{ background: 'rgba(245,158,11,0.1)', padding: 10, borderRadius: 8, fontSize: '0.85rem', marginTop: 8, borderLeft: '4px solid #f59e0b' }}>
+                                            <strong style={{ color: '#d97706' }}>Your critique:</strong> {summary.critiques[q.id]}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </article>
+                    );
+                })}
+            </section>
+        </main>
+    );
+}
