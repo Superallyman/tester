@@ -4,7 +4,7 @@ import { query } from '@/server/db';
 const SORTS: Record<string, string> = {
     newest: 'a.attempted_at desc',
     oldest: 'a.attempted_at asc',
-    confidence: 'a.user_rating desc',
+    confidence: 'a.user_rating desc nulls last',
     satisfaction: 'a.satisfaction_rating desc nulls last',
 };
 

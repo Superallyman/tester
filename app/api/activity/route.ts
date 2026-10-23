@@ -26,7 +26,7 @@ export const POST = handler(async (req, user) => {
     const clean = rows.map(r => {
         if (!isUuid(r.question_id) || typeof r.is_correct !== 'boolean') throw new HttpError(400, 'Bad row');
         if (!Array.isArray(r.submitted_answer) || !r.submitted_answer.every(s => typeof s === 'string')) throw new HttpError(400, 'Bad answer');
-        return [r.question_id, r.is_correct, ratingOrNull(r.user_rating, 10), ratingOrNull(r.satisfaction_rating, 4), r.submitted_answer];
+        return [r.question_id, r.is_correct, ratingOrNull(r.user_rating, 4), ratingOrNull(r.satisfaction_rating, 4), r.submitted_answer];
     });
 
     // One multi-row insert: unnest the column arrays (submitted_answer goes in as JSON since text[][] can't be ragged)

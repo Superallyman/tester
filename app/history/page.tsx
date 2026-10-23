@@ -306,7 +306,7 @@ export default function HistoryPage() {
                             <div style={{ textAlign: 'right', display: 'flex', gap: '15px', alignItems: 'center' }}>
                                 <div>
                                     <label style={{ display: 'block', fontSize: '0.6rem', opacity: 0.6, marginBottom: '4px', fontWeight: 'bold' }}>CONFIDENCE</label>
-                                    <span style={{ fontWeight: 'bold', color: '#3b82f6' }}>{item.user_rating != null ? `${item.user_rating}/10` : '—'}</span>
+                                    <span style={{ fontWeight: 'bold', color: '#3b82f6' }}>{item.user_rating != null ? `${item.user_rating}/4` : '—'}</span>
                                 </div>
                                 <div>
                                     <label style={{ display: 'block', fontSize: '0.6rem', opacity: 0.6, marginBottom: '4px', fontWeight: 'bold' }}>SATISFACTION</label>
