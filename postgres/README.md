@@ -13,11 +13,30 @@ and query Postgres through `server/db.ts`.
    POSTGRES_PORT=5433
    ```
 2. Start the database: `docker compose up -d db`
-   (`init/001_schema.sql` runs automatically the first time, on an empty volume).
+   (`init/001_schema.sql` builds the base schema automatically the first time, on an empty volume).
 3. Point the app at it in `.env.local`:
    ```
    DATABASE_URL=postgresql://optotester:<password>@127.0.0.1:5433/optotester
    ```
+
+4. Apply schema changes: `npm run db:migrate`. `npm run dev` also does this first, through the `predev` script,
+   and so does the production container when it starts.
+
+## Schema changes
+
+Every change after the base schema is a file in `postgres/migrations/`, named `NNN_what_it_does.sql`. Don't edit a file
+that has been applied; add a new one. `npm run db:migrate` applies pending files in name order, each in its own
+transaction, and records them in `schema_migrations`. `npm run db:migrate -- --status` lists them.
+
+A database that already had migrations applied by hand is marked with `npm run db:migrate -- --baseline 004`.
+The dev database on optotester-dev was baselined this way on 2026-10-23.
+
+## Tests
+
+`npm test` runs `tests/e2e/*.mts` against the dev server on :3000 (override with `TEST_BASE_URL`) and the database in
+`.env.local`. They create throwaway `claude-e2e*@e2e.invalid` accounts and remove them. Browser tests need Playwright's
+Chromium; on optotester-dev `tests/run.sh` loads the unpacked system libraries from `~/.cache/optotester-pw`.
+`npx tsx --env-file=.env.local tests/screenshots.mts` saves screenshots of the account pages to `tests/screenshots-out/`.
 
 ## Copying data from Supabase
 
@@ -30,7 +49,7 @@ MATCH or DIFFERENT. Run it right after a sync.
 
 ## Accounts and sign-in
 
-`app_users` (`init/002_app_users.sql`) decides who can use the app. Each row can sign in with GitHub, with an
+`app_users` (`migrations/002_app_users.sql`) decides who can use the app. Each row can sign in with GitHub, with an
 email + password, or both. History in `user_activity` is keyed by the account's email, so it's shared across
 both methods.
 
@@ -38,6 +57,5 @@ both methods.
   After that, the GitHub login is what's matched.
 - **Password**: an admin invites someone at `/admin/users`, which issues a temporary password that the user
   replaces at first sign-in. A GitHub user can add a password themselves at `/account`.
-- To apply to an existing database: `docker exec -i optotester-db psql -U optotester -d optotester < postgres/init/002_app_users.sql`
-  (it also creates accounts for every email that already has history).
+- `migrations/002_app_users.sql` created the table and an account for every email that already had history.
 - Make someone an admin: `docker exec optotester-db psql -U optotester -d optotester -c "update app_users set is_admin = true where email = '<email>'"`

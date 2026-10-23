@@ -1,7 +1,6 @@
 -- Accounts: who may use the app and how they sign in. Replaces the GitHub display-name allowlist.
 -- Everything per-user (user_activity.user_email) is keyed by email, so an account keeps its history
 -- whichever way its owner signs in: GitHub (matched on the verified email or the GitHub login) or a password.
--- Apply to an existing database with: docker exec -i optotester-db psql -U optotester -d optotester < postgres/init/002_app_users.sql
 
 create table if not exists app_users (
     id uuid default gen_random_uuid() not null primary key,

@@ -1,4 +1,4 @@
-FROM node:18-alpine
+FROM node:22-alpine
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
@@ -9,4 +9,5 @@ ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
 ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
 RUN npm run build
 EXPOSE 3000
-CMD ["npm", "run", "start"]
+# Bring the database schema up to date, then serve
+CMD ["sh", "-c", "node scripts/migrate.mjs && npm run start"]
