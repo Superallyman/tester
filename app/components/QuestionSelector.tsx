@@ -13,10 +13,11 @@ interface SearchChip {
 }
 
 interface QuestionStat {
-    totalRating: number;
-    count: number;
+    satisfaction: number | null; // from the most recent attempt that has a rating
     mastered: boolean;
 }
+
+const SATISFACTION_LEVELS = [1, 2, 3, 4];
 
 // Fixed the "any" error by defining the expected RPC return shape
 interface SearchResult {
@@ -36,8 +37,7 @@ export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorP
     const [limit, setLimit] = useState(1); //can we save the limit in local storage so it persists across sessions?
     const [unseenOnly, setUnseenOnly] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [minRating, setMinRating] = useState(1);
-    const [maxRating, setMaxRating] = useState(10);
+    const [satisfactionLevels, setSatisfactionLevels] = useState<number[]>([]);
     const [notMasteredOnly, setNotMasteredOnly] = useState(false);
     const [noResults, setNoResults] = useState(false);
 
@@ -130,16 +130,14 @@ export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorP
         setNoResults(false);
 
         try {
-            const activityData = await api<{ question_id: string; is_correct: boolean; user_rating: number | null }[]>('/api/activity');
+            const activityData = await api<{ question_id: string; is_correct: boolean; satisfaction_rating: number | null }[]>('/api/activity');
 
+            // Attempts come oldest first, so a later rating replaces an earlier one
             const statsByQuestion: Record<string, QuestionStat> = {};
             activityData.forEach(a => {
-                if (!statsByQuestion[a.question_id]) {
-                    statsByQuestion[a.question_id] = { totalRating: 0, count: 0, mastered: false };
-                }
-                statsByQuestion[a.question_id].totalRating += (a.user_rating || 5);
-                statsByQuestion[a.question_id].count += 1;
-                if (a.is_correct) statsByQuestion[a.question_id].mastered = true;
+                const stats = statsByQuestion[a.question_id] ??= { satisfaction: null, mastered: false };
+                if (a.satisfaction_rating !== null) stats.satisfaction = a.satisfaction_rating;
+                if (a.is_correct) stats.mastered = true;
             });
 
             if (hasPhraseFilters && currentPoolIds.length === 0) {
@@ -162,10 +160,10 @@ export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorP
             const filtered = (baseQuestions || []).filter(q => {
                 const stats = statsByQuestion[q.id];
                 if (unseenOnly) return !stats;
-                if (notMasteredOnly || minRating !== 1 || maxRating !== 10) {
+                if (notMasteredOnly || satisfactionLevels.length > 0) {
                     if (!stats) return false;
-                    const avg = stats.totalRating / stats.count;
-                    return avg >= minRating && avg <= maxRating && (notMasteredOnly ? !stats.mastered : true);
+                    if (notMasteredOnly && stats.mastered) return false;
+                    return satisfactionLevels.length === 0 || (stats.satisfaction !== null && satisfactionLevels.includes(stats.satisfaction));
                 }
                 return true;
             });
@@ -262,22 +260,44 @@ export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorP
                         style={{ padding: '10px', background: 'rgba(128,128,128,0.1)', border: '1px solid rgba(128,128,128,0.2)', color: 'inherit', borderRadius: '8px' }}
                     />
                 </div>                <div style={{ display: 'flex', alignItems: 'center', marginTop: '18px' }}>
-                    <input type="checkbox" id="unseen" checked={unseenOnly} disabled={notMasteredOnly || minRating !== 1 || maxRating !== 10} onChange={(e) => setUnseenOnly(e.target.checked)} />
+                    <input type="checkbox" id="unseen" checked={unseenOnly} disabled={notMasteredOnly || satisfactionLevels.length > 0} onChange={(e) => setUnseenOnly(e.target.checked)} />
                     <label htmlFor="unseen" style={{ marginLeft: '8px', fontSize: '0.9rem', opacity: (unseenOnly) ? 1 : 0.6 }}>Unseen Only</label>
                 </div>
             </div>
 
             <div style={{ padding: '12px', background: 'rgba(128,128,128,0.03)', borderRadius: '8px', border: '1px solid rgba(128,128,128,0.15)', marginBottom: '20px', opacity: unseenOnly ? 0.5 : 1, pointerEvents: unseenOnly ? 'none' : 'auto' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '10px' }}>
-                    <span style={{ opacity: 0.8 }}>Confidence Range: {minRating}-{maxRating}</span>
+                    <span style={{ opacity: 0.8 }}>
+                        Satisfaction: {satisfactionLevels.length ? [...satisfactionLevels].sort().join(', ') : 'Any'}
+                    </span>
                     <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                         <input type="checkbox" checked={notMasteredOnly} onChange={(e) => { setNotMasteredOnly(e.target.checked); if (e.target.checked) setUnseenOnly(false); }} />
                         <span style={{ marginLeft: '6px', fontSize: '0.8rem' }}>Exclude Mastered</span>
                     </label>
                 </div>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                    <input type="range" min="1" max="10" value={minRating} onChange={(e) => { setMinRating(Number(e.target.value)); setUnseenOnly(false); }} style={{ flex: 1, accentColor: '#0070f3' }} />
-                    <input type="range" min="1" max="10" value={maxRating} onChange={(e) => { setMaxRating(Number(e.target.value)); setUnseenOnly(false); }} style={{ flex: 1, accentColor: '#0070f3' }} />
+                <div style={{ display: 'flex', gap: '8px' }}>
+                    {SATISFACTION_LEVELS.map(level => {
+                        const on = satisfactionLevels.includes(level);
+                        return (
+                            <button
+                                key={level}
+                                aria-pressed={on}
+                                onClick={() => {
+                                    setSatisfactionLevels(prev => on ? prev.filter(l => l !== level) : [...prev, level]);
+                                    setUnseenOnly(false);
+                                }}
+                                style={{
+                                    flex: 1, padding: '8px 0', borderRadius: '6px', border: 'none', cursor: 'pointer', fontWeight: 'bold',
+                                    background: on ? '#0070f3' : 'rgba(128,128,128,0.2)', color: on ? 'white' : 'inherit',
+                                }}
+                            >
+                                {level}
+                            </button>
+                        );
+                    })}
+                </div>
+                <div style={{ fontSize: '0.7rem', opacity: 0.6, marginTop: '8px' }}>
+                    Uses your latest satisfaction rating for each question. Select none to ignore ratings.
                 </div>
             </div>
 
