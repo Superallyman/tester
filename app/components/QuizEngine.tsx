@@ -26,8 +26,8 @@ const LETTERS = 'ABCDEFGH';
 const SHORTCUTS: [string, string][] = [
     ['A–H', 'Pick or unpick an answer'],
     ['1–4', 'Rate confidence (before submitting) or satisfaction (after)'],
-    ['→ / J', 'Next question'],
-    ['← / K', 'Previous question'],
+    ['→ / K', 'Next question'],
+    ['← / J', 'Previous question'],
     ['Enter', 'Next question'],
     ['Ctrl + Enter', 'Submit all answers'],
     ['?', 'Show or hide these shortcuts'],
@@ -109,11 +109,13 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
         return () => { if (timerRef.current) clearInterval(timerRef.current); };
     }, [questionIds]);
 
+    // One correct answer: options act like radio buttons. Several: like checkboxes, as on the exam ("Select 2").
     const toggleOption = (qId: string, option: string) => {
         if (hasSubmitted) return;
+        const multi = (questions.find(q => q.id === qId)?.correct_answers.length ?? 1) > 1;
         setUserSelections(prev => {
             const current = prev[qId] || [];
-            const next = current.includes(option) ? current.filter(i => i !== option) : [...current, option];
+            const next = current.includes(option) ? current.filter(i => i !== option) : multi ? [...current, option] : [option];
             return { ...prev, [qId]: next };
         });
     };
@@ -225,12 +227,12 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
                 e.preventDefault();
                 const val = Number(key);
                 rate(q.id, (hasSubmitted ? satisfaction[q.id] : ratings[q.id]) === val ? undefined : val);
-            } else if (key === 'ArrowRight' || key === 'j' || key === 'J' || key === 'Enter') {
+            } else if (key === 'ArrowRight' || key === 'k' || key === 'K' || key === 'Enter') {
                 // Enter on a focused button should press it, not skip ahead
                 if (key === 'Enter' && target.closest('button, a')) return;
                 e.preventDefault();
                 goTo(active + 1);
-            } else if (key === 'ArrowLeft' || key === 'k' || key === 'K') {
+            } else if (key === 'ArrowLeft' || key === 'j' || key === 'J') {
                 e.preventDefault();
                 goTo(active - 1);
             } else if (key === '?') {
@@ -316,6 +318,7 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
                 const isTracked = hasSubmitted ? !!activityIds[q.id] : ratings[q.id] !== undefined;
                 const selected = userSelections[q.id] || [];
                 const isCorrect = selected.length === q.correct_answers.length && selected.every(val => q.correct_answers.includes(val));
+                const multi = q.correct_answers.length > 1;
 
                 return (
                     <div key={q.id} ref={el => { cardRefs.current[idx] = el; }} onMouseDown={() => setActive(idx)}
@@ -333,8 +336,15 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
                         </div>
 
                         <h3 style={{ marginTop: 0, lineHeight: 1.4 }}>{idx + 1}. {q.question_text}</h3>
+                        {multi && (
+                            <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#3b82f6' }}>
+                                Select {q.correct_answers.length}
+                                {!hasSubmitted && <span style={{ fontWeight: 'normal', opacity: 0.8 }}> · {selected.length} chosen</span>}
+                            </div>
+                        )}
 
-                        <div style={{ display: 'grid', gap: '8px', marginTop: '15px' }}>
+                        <div role={hasSubmitted ? undefined : multi ? 'group' : 'radiogroup'} aria-label={`Answers for question ${idx + 1}`}
+                            style={{ display: 'grid', gap: '8px', marginTop: '15px' }}>
                             {q.options.map((opt, optIdx) => {
                                 const wasSelected = selected.includes(opt);
                                 const isOptCorrect = q.correct_answers.includes(opt);
@@ -343,6 +353,8 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
                                     return (
                                         <button
                                             key={optIdx}
+                                            role={multi ? 'checkbox' : 'radio'}
+                                            aria-checked={wasSelected}
                                             onClick={() => toggleOption(q.id, opt)}
                                             style={{
                                                 padding: '12px',
@@ -355,6 +367,7 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
                                                 display: 'flex', gap: '10px', alignItems: 'baseline',
                                             }}
                                         >
+                                            <span aria-hidden="true" style={{ flexShrink: 0, width: '1em', textAlign: 'center' }}>{multi ? (wasSelected ? '☑' : '☐') : (wasSelected ? '●' : '○')}</span>
                                             <span style={{ fontWeight: 'bold', opacity: 0.6, flexShrink: 0 }}>{LETTERS[optIdx]}.</span>
                                             <span>{opt}</span>
                                         </button>

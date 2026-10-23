@@ -1,4 +1,5 @@
-// Quick Test from the keyboard: answer, rate, move and submit without the mouse, in both display modes
+// Quick Test from the keyboard: answer, rate, move and submit without the mouse, in both display modes;
+// single-answer questions act like radio buttons and multi-answer ones like checkboxes
 import { encode } from 'next-auth/jwt';
 import { chromium } from 'playwright';
 const { query, pool } = await import('../../server/db.ts');
@@ -11,6 +12,10 @@ const browser = await chromium.launch({ args: ['--disable-gpu', '--no-sandbox'] 
 try {
     await query('delete from app_users where email = $1', [E]);
     await query('delete from user_activity where user_email = $1', [E]);
+    await query(`delete from questions where category = 'E2E Test'`);
+    await query(`insert into questions (category, question_text, options, correct_answers, explanation) values
+        ('E2E Test', 'E2E single: which lens corrects myopia?', '{Plus,Minus,Prism}', '{Minus}', 'x'),
+        ('E2E Test', 'E2E multi: which two are refractive errors?', '{Myopia,Hyperopia,Glaucoma,Cataract}', '{Myopia,Hyperopia}', 'x')`);
     const [me] = await query<{ id: string }>(`insert into app_users (email, name) values ($1, 'E2E Keys') returning id`, [E]);
     const ctx = await browser.newContext({ viewport: { width: 1200, height: 900 } });
     await ctx.addCookies([{ name: 'next-auth.session-token', url: BASE,
@@ -66,11 +71,40 @@ try {
     check('Letter key picks that option', picked === 'rgb(68, 68, 68)', picked);
     await page.keyboard.press('?');
     check('? shows the shortcuts', await page.locator('text=Ctrl + Enter').isVisible());
+    await page.keyboard.press('?');
+    await page.keyboard.press('j');
+    check('J goes back', await page.locator('text=Question 1 of 3').isVisible());
+    await page.keyboard.press('k');
+    check('K goes forward', await page.locator('text=Question 2 of 3').isVisible());
+
+    // Radio vs checkbox, on the two throwaway questions only (picked through the category filter)
+    await page.goto(BASE + '/', { waitUntil: 'networkidle' });
+    await page.evaluate(() => localStorage.setItem('quiz_mode', 'all'));
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.waitForTimeout(1500);
+    await page.getByText('Filter by Category').click();
+    await page.getByRole('button', { name: 'E2E Test' }).click();
+    await page.locator('input[type=number]').last().fill('10');
+    await page.getByText('Generate Quiz').click();
+    await page.waitForSelector('h3', { timeout: 15000 });
+    await page.waitForTimeout(500);
+    const card = (text: string) => page.locator('div', { has: page.locator('h3', { hasText: text }) }).last();
+    const single = card('E2E single'), multi = card('E2E multi');
+    await single.getByRole('radio', { name: /Plus/ }).click();
+    await single.getByRole('radio', { name: /Minus/ }).click();
+    const singleChecked = await single.locator('[aria-checked=true]').allTextContents();
+    check('Single answer: picking another replaces the first', singleChecked.length === 1 && singleChecked[0].includes('Minus'), JSON.stringify(singleChecked));
+    check('Single answer shows no "Select" hint', !(await single.locator('text=/^Select \\d/').count()));
+    await multi.getByRole('checkbox', { name: /Myopia/ }).click();
+    await multi.getByRole('checkbox', { name: /Hyperopia/ }).click();
+    check('Multi answer: both stay picked', (await multi.locator('[aria-checked=true]').count()) === 2);
+    check('Multi answer says how many to pick', (await multi.textContent())?.includes('Select 2 · 2 chosen') ?? false);
 } catch (e) {
     failed++;
     console.error(e);
 } finally {
     await query('delete from user_activity where user_email = $1', [E]);
+    await query(`delete from questions where category = 'E2E Test'`);
     await query('delete from app_users where email = $1', [E]);
     await browser.close();
     await pool.end();
