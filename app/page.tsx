@@ -24,26 +24,17 @@ export default function PracticePage() {
   return (
     <main style={{ maxWidth: '800px', margin: '0 auto', padding: '2rem 1rem' }}>
 
-      {/* 1. The Brain */}
-      {activeQuestionIds.length == 0 ? (
+      {activeQuestionIds.length === 0 ? (
         <div>
           <SmartReview onQuestionsFound={(ids) => setActiveQuestionIds(ids)} />
-          <h1>Test Customizer</h1>
+          <h2 style={{ fontSize: '0.75rem', letterSpacing: '0.06em', opacity: 0.6, fontWeight: 600, margin: '1.75rem 0 0.6rem' }}>TEST CUSTOMIZER</h2>
           <QuestionSelector onQuestionsFound={(ids) => setActiveQuestionIds(ids)} />
+          <p style={{ textAlign: 'center', opacity: 0.5, marginTop: '1.5rem' }}>
+            Use the filters above to build a custom quiz.
+          </p>
         </div>
       ) : (
-        <></>
-      )}
-
-      <hr style={{ margin: '2rem 0', opacity: 0.2 }} />
-
-      {/* 2. The Body (only shows when IDs are found) */}
-      {activeQuestionIds.length > 0 ? (
         <QuizEngine key={activeQuestionIds.join(',')} questionIds={activeQuestionIds} />
-      ) : (
-        <p style={{ textAlign: 'center', opacity: 0.5 }}>
-          Use filters above create a custom quiz session.
-        </p>
       )}
     </main>
   );

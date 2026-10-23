@@ -5,6 +5,8 @@ import { api } from '@/utils/api';
 
 import { smartClean } from '@/utils/formatters';
 import ReportQuestion from './ReportQuestion';
+import ReviewedOption from './ReviewedOption';
+import { Timer } from 'lucide-react';
 
 interface Question {
     id: string;
@@ -254,10 +256,11 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
                         key={num}
                         onClick={() => onSelect(current === num ? undefined : num)}
                         style={{
-                            flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #444',
+                            flex: 1, padding: '8px', borderRadius: '6px',
+                            border: current === num ? '1px solid #0070f3' : '1px solid rgba(128,128,128,0.4)',
                             cursor: 'pointer',
                             background: current === num ? '#0070f3' : 'transparent',
-                            transition: 'all 0.2s', fontSize: '0.8rem', color: 'inherit'
+                            transition: 'all 0.2s', fontSize: '0.8rem', color: current === num ? 'white' : 'inherit'
                         }}
                     >
                         {num}
@@ -283,7 +286,7 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
                         style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontSize: '0.8rem', padding: 0 }}>
                         ⌨ Shortcuts
                     </button>
-                    <span style={{ fontWeight: 'bold', opacity: 0.8 }}>⏱️ {formatTime(seconds)}</span>
+                    <span style={{ fontWeight: 'bold', opacity: 0.8, display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Timer size={16} aria-hidden="true" /> {formatTime(seconds)}</span>
                 </div>
             </div>
 
@@ -327,13 +330,11 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
                             border: isActive && mode === 'all' ? '1px solid #0070f3' : '1px solid rgba(128,128,128,0.2)',
                             boxShadow: isActive && mode === 'all' ? '0 0 0 1px #0070f3' : 'none', scrollMarginTop: '12px',
                         }}>
-                        <div style={{ marginBottom: '1rem', padding: '0.5rem' }}>
-                            {hasSubmitted && (
-                                <span style={{ fontSize: '1.0rem', fontWeight: 'bold', color: isCorrect ? '#10b981' : '#ef4444' }}>
-                                    {isCorrect ? 'CORRECT' : 'INCORRECT'}
-                                </span>
-                            )}
-                        </div>
+                        {hasSubmitted && (
+                            <div style={{ marginBottom: '0.75rem', fontSize: '0.85rem', fontWeight: 'bold', letterSpacing: '0.04em', color: isCorrect ? '#10b981' : '#ef4444' }}>
+                                {isCorrect ? 'CORRECT' : 'INCORRECT'}
+                            </div>
+                        )}
 
                         <h3 style={{ marginTop: 0, lineHeight: 1.4 }}>{idx + 1}. {q.question_text}</h3>
                         {multi && (
@@ -362,8 +363,8 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
                                                 borderRadius: '8px',
                                                 color: 'inherit',
                                                 cursor: 'pointer',
-                                                backgroundColor: wasSelected ? '#444' : 'transparent',
-                                                border: '1px solid #444',
+                                                backgroundColor: wasSelected ? 'rgba(0,112,243,0.12)' : 'transparent',
+                                                border: wasSelected ? '1.5px solid #0070f3' : '1px solid rgba(128,128,128,0.4)',
                                                 display: 'flex', gap: '10px', alignItems: 'baseline',
                                             }}
                                         >
@@ -374,35 +375,7 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
                                     );
                                 }
 
-                                return (
-                                    <div
-                                        key={optIdx}
-                                        style={{
-                                            padding: '12px',
-                                            borderRadius: '8px',
-                                            fontSize: '0.85rem',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'space-between',
-                                            border: '1px solid rgba(128,128,128,0.2)',
-                                            background: 'transparent',
-                                        }}
-                                    >
-                                        <span><span style={{ fontWeight: 'bold', opacity: 0.6, marginRight: '10px' }}>{LETTERS[optIdx]}.</span>{opt}</span>
-                                        <span style={{
-                                            fontSize: '1.1rem',
-                                            fontWeight: 'bold',
-                                            marginLeft: '12px',
-                                            color: isOptCorrect
-                                                ? (wasSelected ? '#10b981' : '#3b82f6')
-                                                : (wasSelected ? '#ef4444' : 'transparent'),
-                                        }}>
-                                            {isOptCorrect
-                                                ? (wasSelected ? '✓' : '—')
-                                                : (wasSelected ? '✕' : '')}
-                                        </span>
-                                    </div>
-                                );
+                                return <ReviewedOption key={optIdx} letter={LETTERS[optIdx]} text={opt} picked={wasSelected} correct={isOptCorrect} />;
                             })}
                         </div>
 
@@ -430,10 +403,14 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
 
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginTop: '12px' }}>
                             <ReportQuestion key={q.id} questionId={q.id} />
-                            {!isTracked ? (
-                                <span style={{ fontSize: '0.6rem', opacity: 0.5, border: '1px solid rgba(128,128,128,0.3)', padding: '1px 6px', borderRadius: '3px', letterSpacing: '0.03rem' }}>NOT TRACKED</span>
+                            {hasSubmitted ? (
+                                isTracked
+                                    ? <span style={{ fontSize: '0.65rem', color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid #10b981', padding: '1px 6px', borderRadius: '3px' }}>✓ SAVED TO HISTORY</span>
+                                    : <span style={{ fontSize: '0.65rem', opacity: 0.6, border: '1px solid rgba(128,128,128,0.3)', padding: '1px 6px', borderRadius: '3px' }}>NOT SAVED · rate it to save</span>
                             ) : (
-                                <span style={{ fontSize: '0.6rem', color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid #10b981', padding: '1px 6px', borderRadius: '3px' }}>✓ SAVED</span>
+                                <span style={{ fontSize: '0.65rem', opacity: isTracked ? 0.8 : 0.5, border: '1px solid rgba(128,128,128,0.3)', padding: '1px 6px', borderRadius: '3px' }}>
+                                    {isTracked ? 'WILL BE SAVED' : 'RATE IT TO SAVE IT'}
+                                </span>
                             )}
                         </div>
                     </div>

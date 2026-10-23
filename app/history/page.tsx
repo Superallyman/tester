@@ -7,6 +7,8 @@ import { useSession } from "next-auth/react";
 import { smartClean } from '@/utils/formatters';
 import { FrostedSelect } from '../components/FrostedSelect';
 import ReportQuestion from '../components/ReportQuestion';
+import ReviewedOption from '../components/ReviewedOption';
+import { Trash2 } from 'lucide-react';
 
 interface HistoryItem {
     id: string;
@@ -297,15 +299,15 @@ export default function HistoryPage() {
                 {history.map((item) => (
                     <div key={item.id} style={{ padding: '1.5rem', background: 'rgba(128,128,128,0.05)', borderRadius: '12px', borderLeft: `6px solid ${item.is_correct ? '#10b981' : '#ef4444'}`, borderTop: '1px solid rgba(128,128,128,0.1)', borderRight: '1px solid rgba(128,128,128,0.1)', borderBottom: '1px solid rgba(128,128,128,0.1)', position: 'relative' }}>
 
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
-                            <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '15px' }}>
+                            <div style={{ minWidth: 0 }}>
                                 <span style={{ background: 'rgba(128,128,128,0.15)', padding: '3px 10px', borderRadius: '6px', fontSize: '0.7rem', color: '#3b82f6', fontWeight: 'bold' }}>{item.questions.category}</span>
                                 <div style={{ fontSize: '0.75rem', opacity: 0.5, marginTop: '8px' }}>
                                     {new Date(item.attempted_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
                                 </div>
                             </div>
 
-                            <div style={{ textAlign: 'right', display: 'flex', gap: '15px', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', gap: '15px', alignItems: 'center', flexWrap: 'wrap' }}>
                                 <div>
                                     <label style={{ display: 'block', fontSize: '0.6rem', opacity: 0.6, marginBottom: '4px', fontWeight: 'bold' }}>CONFIDENCE</label>
                                     <span style={{ fontWeight: 'bold', color: '#3b82f6' }}>{item.user_rating != null ? `${item.user_rating}/4` : '—'}</span>
@@ -329,7 +331,10 @@ export default function HistoryPage() {
                                         ))}
                                     </div>
                                 </div>
-                                <button onClick={() => handleDelete(item.id)} style={{ background: 'none', border: 'none', opacity: 0.3, cursor: 'pointer', fontSize: '1rem', marginLeft: '5px', filter: 'grayscale(1)' }}>🗑️</button>
+                                <button onClick={() => handleDelete(item.id)} aria-label="Delete this attempt" title="Delete this attempt"
+                                    style={{ background: 'none', border: 'none', opacity: 0.45, cursor: 'pointer', color: 'inherit', padding: '4px', display: 'flex' }}>
+                                    <Trash2 size={16} />
+                                </button>
                             </div>
                         </div>
 
@@ -341,34 +346,7 @@ export default function HistoryPage() {
                                 const wasSelected = item.submitted_answer?.includes(opt);
                                 const isCorrect = item.questions.correct_answers.includes(opt);
 
-                                return (
-                                    <div
-                                        key={idx}
-                                        style={{
-                                            padding: '12px',
-                                            borderRadius: '8px',
-                                            fontSize: '0.85rem',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'space-between',
-                                        }}
-                                    >
-                                        <span>{decodedOpt}</span>
-
-                                        <span style={{
-                                            fontSize: '1.1rem',
-                                            fontWeight: 'bold',
-                                            marginLeft: '12px',
-                                            color: isCorrect
-                                                ? (wasSelected ? '#10b981' : '#3b82f6')
-                                                : (wasSelected ? '#ef4444' : 'transparent'),
-                                        }}>
-                                            {isCorrect
-                                                ? (wasSelected ? '✓' : '—')
-                                                : (wasSelected ? '✕' : '')}
-                                        </span>
-                                    </div>
-                                );
+                                return <ReviewedOption key={idx} letter={String.fromCharCode(65 + idx)} text={decodedOpt} picked={!!wasSelected} correct={isCorrect} />;
                             })}
                         </div>
 

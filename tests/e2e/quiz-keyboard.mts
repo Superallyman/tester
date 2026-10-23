@@ -67,8 +67,8 @@ try {
     await page.keyboard.press('Enter');
     check('Enter moves to the next question', await page.locator('text=Question 2 of 3').isVisible());
     await page.keyboard.press('c');
-    const picked = await page.locator('h3 ~ div button').nth(2).evaluate(el => getComputedStyle(el).backgroundColor);
-    check('Letter key picks that option', picked === 'rgb(68, 68, 68)', picked);
+    const picked = await page.locator('[aria-checked=true]').allTextContents();
+    check('Letter key picks that option', picked.length === 1 && picked[0].includes('C.'), JSON.stringify(picked));
     await page.keyboard.press('?');
     check('? shows the shortcuts', await page.locator('text=Ctrl + Enter').isVisible());
     await page.keyboard.press('?');
