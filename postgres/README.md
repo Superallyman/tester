@@ -27,3 +27,17 @@ transaction, and prints row counts from both sides. It needs `SUPABASE_DB_HOST`,
 
 `./postgres/verify-against-supabase.sh` compares row counts and checksums of every table on both sides and prints
 MATCH or DIFFERENT. Run it right after a sync.
+
+## Accounts and sign-in
+
+`app_users` (`init/002_app_users.sql`) decides who can use the app. Each row can sign in with GitHub, with an
+email + password, or both. History in `user_activity` is keyed by the account's email, so it's shared across
+both methods.
+
+- **GitHub**: the first GitHub sign-in links to the account whose email matches the verified GitHub email.
+  After that, the GitHub login is what's matched.
+- **Password**: an admin invites someone at `/admin/users`, which issues a temporary password that the user
+  replaces at first sign-in. A GitHub user can add a password themselves at `/account`.
+- To apply to an existing database: `docker exec -i optotester-db psql -U optotester -d optotester < postgres/init/002_app_users.sql`
+  (it also creates accounts for every email that already has history).
+- Make someone an admin: `docker exec optotester-db psql -U optotester -d optotester -c "update app_users set is_admin = true where email = '<email>'"`

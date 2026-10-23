@@ -28,8 +28,11 @@ function AuthButton() {
   if (session) {
     return (
       <div className="flex flex-col items-start md:items-end text-sm leading-tight">
-        <span className="font-medium">{session?.user?.name}</span>
-        <button onClick={() => signOut()} className="opacity-70 hover:opacity-100 hover:underline">Sign out</button>
+        <Link href="/account" className="font-medium hover:underline">{session?.user?.name}</Link>
+        <span className="flex gap-3">
+          {session.user?.isAdmin && <Link href="/admin/users" className="opacity-70 hover:opacity-100 hover:underline">Users</Link>}
+          <button onClick={() => signOut({ callbackUrl: "/signin" })} className="opacity-70 hover:opacity-100 hover:underline">Sign out</button>
+        </span>
       </div>
     );
   }
