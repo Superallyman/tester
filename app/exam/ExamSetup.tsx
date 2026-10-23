@@ -3,9 +3,9 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '@/utils/api';
 
-import {
-    EXAM_PRESETS, ExamConfig, ExamSummary, ExamState, SECONDS_PER_ITEM, formatClock, loadHistory,
-} from './examUtils';
+import { EXAM_PRESETS, ExamConfig, ExamState, SECONDS_PER_ITEM, formatClock } from './examUtils';
+import { FinishedExam } from './examSync';
+import PastExams from './PastExams';
 import { BLUEPRINT, BLUEPRINT_SOURCE, SCORED_ITEMS, blueprintKey, blueprintQuotas } from './blueprint';
 
 export type PoolFilter = 'all' | 'unseen' | 'notMastered' | 'missed';
@@ -13,13 +13,14 @@ export type PoolFilter = 'all' | 'unseen' | 'notMastered' | 'missed';
 interface ExamSetupProps {
     signedIn: boolean;
     resumable: { state: ExamState; total: number } | null;
-    hasLastResult: boolean;
+    history: FinishedExam[] | null; // null while loading
     busy: boolean;
     error: string | null;
     onStart: (config: ExamConfig, filter: PoolFilter, categories: string[]) => void;
     onResume: () => void;
     onDiscardResume: () => void;
-    onViewLastResult: () => void;
+    onReview: (id: string) => void;
+    onDelete: (id: string) => void;
 }
 
 const card: React.CSSProperties = {
@@ -31,7 +32,7 @@ const card: React.CSSProperties = {
 
 const label: React.CSSProperties = { fontSize: '0.65rem', opacity: 0.6, letterSpacing: '0.05em', display: 'block', marginBottom: 6 };
 
-export default function ExamSetup({ signedIn, resumable, hasLastResult, busy, error, onStart, onResume, onDiscardResume, onViewLastResult }: ExamSetupProps) {
+export default function ExamSetup({ signedIn, resumable, history, busy, error, onStart, onResume, onDiscardResume, onReview, onDelete }: ExamSetupProps) {
     const [preset, setPreset] = useState<string>('block');
     const [customCount, setCustomCount] = useState(25);
     const [timed, setTimed] = useState(true);
@@ -41,10 +42,8 @@ export default function ExamSetup({ signedIn, resumable, hasLastResult, busy, er
     const [selectedCats, setSelectedCats] = useState<string[]>([]);
     const [showCats, setShowCats] = useState(false);
     const [showBlueprint, setShowBlueprint] = useState(false);
-    const [history, setHistory] = useState<ExamSummary[]>([]);
 
     useEffect(() => {
-        setHistory(loadHistory());
         api<{ cat_name: string; q_count: number }[]>('/api/categories').then(data => {
             const merged: Record<string, number> = {};
             data.forEach(c => {
@@ -285,38 +284,7 @@ export default function ExamSetup({ signedIn, resumable, hasLastResult, busy, er
                 </ul>
             </details>
 
-            {(history.length > 0 || hasLastResult) && (
-                <section style={{ marginTop: '1.75rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <h2 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>Past exams on this device</h2>
-                        {hasLastResult && <button onClick={onViewLastResult} style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontSize: '0.9rem' }}>View last result →</button>}
-                    </div>
-                    <div style={{ overflowX: 'auto' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 10, fontSize: '0.88rem' }}>
-                            <thead>
-                                <tr style={{ textAlign: 'left', opacity: 0.6, fontSize: '0.7rem', letterSpacing: '0.05em' }}>
-                                    <th style={{ padding: 6 }}>DATE</th><th style={{ padding: 6 }}>SESSION</th><th style={{ padding: 6 }}>SCORE</th><th style={{ padding: 6 }}>TIME</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {history.map(h => {
-                                    const pct = h.total ? (h.correct / h.total) * 100 : 0;
-                                    return (
-                                        <tr key={h.id} style={{ borderTop: '1px solid rgba(128,128,128,0.2)' }}>
-                                            <td style={{ padding: 6 }}>{new Date(h.finishedAt).toLocaleDateString()}</td>
-                                            <td style={{ padding: 6 }}>{h.label}</td>
-                                            <td style={{ padding: 6, fontWeight: 600, color: pct >= 70 ? '#10b981' : pct >= 55 ? '#f59e0b' : '#ef4444' }}>
-                                                {h.correct}/{h.total} ({pct.toFixed(0)}%)
-                                            </td>
-                                            <td style={{ padding: 6 }}>{formatClock(h.elapsedSec)}</td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-                </section>
-            )}
+            <PastExams history={history} onReview={onReview} onDelete={onDelete} />
         </main>
     );
 }

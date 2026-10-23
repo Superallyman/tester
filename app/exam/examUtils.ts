@@ -46,6 +46,8 @@ export interface ExamState {
     reviewQueue: string[] | null;
     colorScheme: string;
     timeSpent?: Record<string, number>; // seconds on each item while it was on screen
+    savedAt?: string;   // when this copy was last written (device clock), a tie-breaker when syncing
+    serverId?: string;  // the exam_attempts row this exam is synced to
 }
 
 export interface CategoryResult {
@@ -121,16 +123,16 @@ export const clearExam = () => {
     } catch { /* storage unavailable */ }
 };
 
+// Exam history used to live only in the browser. It's now on the server (examSync); these read what's left to import.
 export const loadHistory = () => readJSON<ExamSummary[]>(HISTORY_KEY) || [];
-
-export const saveSummary = (summary: ExamSummary, questions: ExamQuestion[]) => {
-    // Keep the per-question detail only for the most recent result to stay well under storage limits
-    const slim = { ...summary, answers: {}, critiques: {}, timeSpent: {} };
-    writeJSON(HISTORY_KEY, [slim, ...loadHistory()].slice(0, 30));
-    writeJSON(LAST_RESULT_KEY, { summary, questions });
-};
-
 export const loadLastResult = () => readJSON<{ summary: ExamSummary; questions: ExamQuestion[] }>(LAST_RESULT_KEY);
+
+export const clearLocalHistory = () => {
+    try {
+        localStorage.removeItem(HISTORY_KEY);
+        localStorage.removeItem(LAST_RESULT_KEY);
+    } catch { /* storage unavailable */ }
+};
 
 export const isCorrect = (q: ExamQuestion, selected: string[] = []) =>
     selected.length === q.correct_answers.length && selected.every(v => q.correct_answers.includes(v));

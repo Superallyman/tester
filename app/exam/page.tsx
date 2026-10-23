@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useSession } from "next-auth/react";
 import { api } from '@/utils/api';
 import { smartClean } from '@/utils/formatters';
@@ -10,8 +10,12 @@ import ExamShell from './ExamShell';
 import ExamResults from './ExamResults';
 import {
     CategoryResult, ExamConfig, ExamQuestion, ExamState, ExamSummary, clearExam, isCorrect, loadExam,
-    loadLastResult, newExamId, saveExamQuestions, saveExamState, saveSummary,
+    newExamId, saveExamQuestions, saveExamState,
 } from './examUtils';
+import {
+    FinishedExam, createRemoteExam, createSaver, deleteRemoteExam, fetchExam, finishRemoteExam, importLocalHistory,
+    listExams, reconcileInProgress,
+} from './examSync';
 import { blueprintSample } from './blueprint';
 
 type Phase = 'setup' | 'exam' | 'results';
@@ -25,14 +29,53 @@ export default function PracticeExamPage() {
     const [phase, setPhase] = useState<Phase>('setup');
     const [saved, setSaved] = useState<{ state: ExamState; questions: ExamQuestion[] } | null>(null);
     const [result, setResult] = useState<{ summary: ExamSummary; questions: ExamQuestion[] } | null>(null);
-    const [hasLastResult, setHasLastResult] = useState(false);
+    const [history, setHistory] = useState<FinishedExam[] | null>(null);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [syncError, setSyncError] = useState<string | null>(null);
+    const saver = useRef<ReturnType<typeof createSaver> | null>(null);
 
+    const keepLocal = (exam: { state: ExamState; questions: ExamQuestion[] }) => {
+        saveExamQuestions(exam.questions);
+        saveExamState(exam.state);
+        setSaved(exam);
+    };
+
+    const refreshHistory = useCallback(() => listExams().then(l => { setHistory(l.finished); return l; }), []);
+
+    // The browser's copy shows at once; then the server's list decides what to resume and fills in history
     useEffect(() => {
-        setSaved(loadExam());
-        setHasLastResult(!!loadLastResult());
-    }, []);
+        const local = loadExam();
+        setSaved(local);
+        if (!email) return;
+        (async () => {
+            try {
+                await importLocalHistory().catch(err => console.error('Could not import local exam history', err));
+                const list = await refreshHistory();
+                const winner = await reconcileInProgress(loadExam() ?? local, list.inProgress);
+                if (winner) keepLocal(winner);
+            } catch (err) {
+                console.error(err);
+                setSyncError("Couldn't reach the server, so exams on other devices aren't shown. This device's exam still works.");
+            }
+        })();
+    }, [email, refreshHistory]);
+
+    // Mirror progress to the server while the exam is open, and once more as the page closes
+    const serverId = saved?.state.serverId;
+    useEffect(() => {
+        if (phase !== 'exam' || !serverId) return;
+        const s = createSaver(serverId);
+        saver.current = s;
+        const onHide = () => { s.flush(true); };
+        window.addEventListener('pagehide', onHide);
+        return () => {
+            window.removeEventListener('pagehide', onHide);
+            s.flush();
+            saver.current = null;
+        };
+    }, [phase, serverId]);
+    const onSave = useCallback((state: ExamState) => saver.current?.save(state), []);
 
     // The exam shell is a fixed full-screen overlay; stop the page behind it from scrolling
     useEffect(() => {
@@ -101,9 +144,9 @@ export default function PracticeExamPage() {
                 colorScheme: 'default',
                 timeSpent: {},
             };
-            saveExamQuestions(questions);
-            saveExamState(state);
-            setSaved({ state, questions });
+            // Starting doesn't wait on the server: if this fails, the exam is uploaded the next time the page loads
+            const serverId = await createRemoteExam(state, questions).catch(err => { console.error(err); return undefined; });
+            keepLocal({ state: { ...state, serverId }, questions });
             setPhase('exam');
         } catch (err) {
             console.error(err);
@@ -168,10 +211,16 @@ export default function PracticeExamPage() {
             savedCount,
         };
 
-        saveSummary(summary, questions);
+        try {
+            const id = state.serverId ?? await createRemoteExam(state, questions);
+            await finishRemoteExam(id, state, summary);
+            refreshHistory().catch(console.error);
+        } catch (err) {
+            console.error(err);
+            setSyncError("This result couldn't be saved to your exam history. Its answers are in your History if you chose to save them.");
+        }
         clearExam();
         setSaved(null);
-        setHasLastResult(true);
         setResult({ summary, questions });
         setPhase('results');
         window.scrollTo(0, 0);
@@ -186,7 +235,11 @@ export default function PracticeExamPage() {
                 candidateName={session?.user?.name || 'Candidate'}
                 onFinish={finishExam}
                 onExit={state => { setSaved(s => (s ? { ...s, state } : s)); setPhase('setup'); }}
-                onAbandon={() => { clearExam(); setSaved(null); setPhase('setup'); }}
+                onAbandon={() => {
+                    if (saved.state.serverId) deleteRemoteExam(saved.state.serverId).catch(console.error);
+                    clearExam(); setSaved(null); setPhase('setup');
+                }}
+                onSave={onSave}
             />
         );
     }
@@ -199,19 +252,30 @@ export default function PracticeExamPage() {
         <ExamSetup
             signedIn={!!email}
             resumable={saved ? { state: saved.state, total: saved.questions.length } : null}
-            hasLastResult={hasLastResult}
+            history={history}
             busy={busy}
-            error={error}
+            error={error ?? syncError}
             onStart={startExam}
             onResume={() => {
                 const latest = loadExam();
                 if (latest) setSaved(latest);
                 setPhase('exam');
             }}
-            onDiscardResume={() => { clearExam(); setSaved(null); }}
-            onViewLastResult={() => {
-                const last = loadLastResult();
-                if (last) { setResult(last); setPhase('results'); }
+            onDiscardResume={() => {
+                if (saved?.state.serverId) deleteRemoteExam(saved.state.serverId).catch(console.error);
+                clearExam(); setSaved(null);
+            }}
+            onReview={async id => {
+                const exam = await fetchExam(id).catch(() => null);
+                if (exam?.summary && exam.questions) {
+                    setResult({ summary: exam.summary, questions: exam.questions });
+                    setPhase('results');
+                    window.scrollTo(0, 0);
+                }
+            }}
+            onDelete={async id => {
+                await deleteRemoteExam(id).catch(console.error);
+                refreshHistory().catch(console.error);
             }}
         />
     );

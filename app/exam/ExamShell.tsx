@@ -23,6 +23,7 @@ interface ExamShellProps {
     onFinish: (state: ExamState) => void;
     onExit: (state: ExamState) => void;
     onAbandon: () => void;
+    onSave?: (state: ExamState) => void; // after each local save, e.g. to mirror it to the server
 }
 
 type WindowKey = 'navigator' | 'calculator' | 'notes' | 'drugs' | 'critique';
@@ -191,7 +192,7 @@ function MarkedText({ text, prefix, hl, st }: { text: string; prefix: string; hl
 // Main shell
 // ---------------------------------------------------------------------------
 
-export default function ExamShell({ questions, initialState, candidateName, onFinish, onExit, onAbandon }: ExamShellProps) {
+export default function ExamShell({ questions, initialState, candidateName, onFinish, onExit, onAbandon, onSave }: ExamShellProps) {
     const [state, setState] = useState<ExamState>(initialState);
     const [windows, setWindows] = useState<Partial<Record<WindowKey, boolean>>>({});
     const [dialog, setDialog] = useState<DialogKey>(null);
@@ -213,7 +214,11 @@ export default function ExamShell({ questions, initialState, candidateName, onFi
     const modalOpen = dialog !== null || paused;
 
     // Persist every change so a refresh or accidental close never loses the exam
-    useEffect(() => { saveExamState(state); }, [state]);
+    useEffect(() => {
+        const stamped = { ...state, savedAt: new Date().toISOString() };
+        saveExamState(stamped);
+        onSave?.(stamped);
+    }, [state, onSave]);
 
     // Clock: counts down for timed exams, always tracks elapsed time
     useEffect(() => {

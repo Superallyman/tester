@@ -1,6 +1,6 @@
 // Screenshots of the new auth pages on :3002, signed in as throwaway accounts that are removed afterwards
 import { encode } from 'next-auth/jwt';
-import { chromium } from 'playwright';
+import { chromium, type Page } from 'playwright';
 const { query, pool } = await import('../server/db.ts');
 const { hashPassword } = await import('../server/passwords.ts');
 
@@ -16,7 +16,7 @@ try {
     await query(`insert into app_users (email, name, password_hash, must_change_password) values ('claude-e2e2@e2e.invalid', 'E2E Invitee', $1, true)`, [await hashPassword('temp')]);
 
     const cookie = async (token: object) => ({ name: 'next-auth.session-token', value: await encode({ token, secret: process.env.NEXTAUTH_SECRET }), url: BASE });
-    const shot = async (name: string, path: string, opts: { token?: object; mobile?: boolean; dark?: boolean; act?: (p: any) => Promise<void> } = {}) => {
+    const shot = async (name: string, path: string, opts: { token?: object; mobile?: boolean; dark?: boolean; act?: (p: Page) => Promise<void> } = {}) => {
         const ctx = await browser.newContext({ viewport: opts.mobile ? { width: 390, height: 844 } : { width: 1280, height: 860 }, colorScheme: opts.dark ? 'dark' : 'light' });
         if (opts.token) await ctx.addCookies([await cookie(opts.token)]);
         const page = await ctx.newPage();
