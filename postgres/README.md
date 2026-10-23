@@ -38,6 +38,19 @@ The dev database on optotester-dev was baselined this way on 2026-10-23.
 Chromium; on optotester-dev `tests/run.sh` loads the unpacked system libraries from `~/.cache/optotester-pw`.
 `npx tsx --env-file=.env.local tests/screenshots.mts` saves screenshots of the account pages to `tests/screenshots-out/`.
 
+## Moving production off Supabase
+
+Production still runs on Supabase and keeps adding rows. When it moves, run these steps in order on its new
+database:
+
+1. Start the database and apply the schema: `docker compose up -d db`, then `npm run db:migrate`.
+2. Copy every row from Supabase: `./postgres/sync-from-supabase.sh`.
+3. Check the copy: `./postgres/verify-against-supabase.sh` must print MATCH for every table.
+4. Clean the data: `postgres/cutover/2026-10-data-cleanup.sql`. It removes the February 2026 test rows and the
+   "anonymous" rows, and renames the unused duplicate questions table to `questions_archive`. It's safe to run twice.
+
+The dev database got step 4 on 2026-10-23, so it no longer matches Supabase and must not be synced again.
+
 ## Copying data from Supabase
 
 `./postgres/sync-from-supabase.sh` replaces all local rows with a fresh `pg_dump` of the Supabase tables, in one
