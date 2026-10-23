@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { api } from '@/utils/api';
 
 import { smartClean } from '@/utils/formatters';
+import ReportQuestion from './ReportQuestion';
 
 interface Question {
     id: string;
@@ -414,7 +415,8 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
                             onSelect={(val: number | undefined) => rate(q.id, val)}
                         />
 
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '10px', marginTop: '12px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginTop: '12px' }}>
+                            <ReportQuestion key={q.id} questionId={q.id} />
                             {!isTracked ? (
                                 <span style={{ fontSize: '0.6rem', opacity: 0.5, border: '1px solid rgba(128,128,128,0.3)', padding: '1px 6px', borderRadius: '3px', letterSpacing: '0.03rem' }}>NOT TRACKED</span>
                             ) : (

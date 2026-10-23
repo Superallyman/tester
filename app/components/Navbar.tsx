@@ -30,7 +30,7 @@ function AuthButton() {
       <div className="flex flex-col items-start md:items-end text-sm leading-tight">
         <Link href="/account" className="font-medium hover:underline">{session?.user?.name}</Link>
         <span className="flex gap-3">
-          {session.user?.isAdmin && <Link href="/admin/users" className="opacity-70 hover:opacity-100 hover:underline">Users</Link>}
+          {session.user?.isAdmin && <Link href="/admin/questions" className="opacity-70 hover:opacity-100 hover:underline">Admin</Link>}
           <button onClick={() => signOut({ callbackUrl: "/signin" })} className="opacity-70 hover:opacity-100 hover:underline">Sign out</button>
         </span>
       </div>

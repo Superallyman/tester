@@ -6,9 +6,11 @@ import { useSession } from "next-auth/react";
 
 import { smartClean } from '@/utils/formatters';
 import { FrostedSelect } from '../components/FrostedSelect';
+import ReportQuestion from '../components/ReportQuestion';
 
 interface HistoryItem {
     id: string;
+    question_id: string;
     attempted_at: string;
     updated_at: string;
     is_correct: boolean;
@@ -382,6 +384,7 @@ export default function HistoryPage() {
                             <strong style={{ color: '#3b82f6', display: 'block', marginBottom: '8px', fontSize: '0.75rem', letterSpacing: '0.05em' }}>EXPLANATION:</strong>
                             {decodeHTML(item.questions.explanation)}
                         </div>
+                        <div style={{ marginTop: '10px' }}><ReportQuestion questionId={item.question_id} /></div>
                     </div>
                 ))}
             </div>

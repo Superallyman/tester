@@ -77,7 +77,7 @@ export default function AdminUsersPage() {
     };
 
     return (
-        <div className="mx-auto w-full max-w-4xl px-4 py-8 flex flex-col gap-6">
+        <div className="mx-auto w-full max-w-4xl px-4 py-6 flex flex-col gap-6">
             <h1 className="text-2xl font-bold">Users</h1>
 
             {error && <p role="alert" className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm">{error}</p>}

@@ -4,6 +4,7 @@ import React, { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { ExamQuestion, ExamSummary, LETTERS, PENDING_QUIZ_KEY, formatClock, isCorrect } from './examUtils';
+import ReportQuestion from '../components/ReportQuestion';
 
 interface ExamResultsProps {
     summary: ExamSummary;
@@ -254,6 +255,7 @@ export default function ExamResults({ summary, questions, onNewExam }: ExamResul
                                             <strong style={{ color: '#d97706' }}>Your critique:</strong> {summary.critiques[q.id]}
                                         </div>
                                     )}
+                                    <div style={{ marginTop: 10 }}><ReportQuestion questionId={q.id} /></div>
                                 </div>
                             )}
                         </article>

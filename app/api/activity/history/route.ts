@@ -37,7 +37,7 @@ export const GET = handler(async (req, user) => {
     args.push(limit, offset);
 
     const rows = await query<Record<string, unknown>>(`
-        select a.id, a.attempted_at, a.updated_at, a.is_correct, a.user_rating, a.satisfaction_rating, a.submitted_answer,
+        select a.id, a.question_id, a.attempted_at, a.updated_at, a.is_correct, a.user_rating, a.satisfaction_rating, a.submitted_answer,
                q.question_text, q.options, q.correct_answers, q.explanation, q.category
         from user_activity a
         join questions q on q.id = a.question_id
