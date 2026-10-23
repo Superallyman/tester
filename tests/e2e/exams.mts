@@ -103,9 +103,13 @@ try {
     await page.click('text=Resume Exam');
     await page.waitForTimeout(1000);
     await page.keyboard.press('a');
-    await page.waitForTimeout(3500); // quick save fires 1.5 s after an answer
-    const [saved] = await query<{ state: { answers: Record<string, string[]> } }>(
-        `select state from exam_attempts where user_id = $1 and status = 'in_progress'`, [me.id]);
+    // Quick save fires 1.5 s after an answer; allow longer for a dev server that is still compiling
+    let saved: { state: { answers: Record<string, string[]> } } | undefined;
+    for (let i = 0; i < 20 && !(saved?.state.answers[qs[0].id]?.length); i++) {
+        await page.waitForTimeout(500);
+        [saved] = await query<{ state: { answers: Record<string, string[]> } }>(
+            `select state from exam_attempts where user_id = $1 and status = 'in_progress'`, [me.id]);
+    }
     check('Answer reached the server in the background', (saved?.state.answers[qs[0].id]?.length ?? 0) === 1, JSON.stringify(saved?.state.answers));
 
     // Review a past exam in full from the list
