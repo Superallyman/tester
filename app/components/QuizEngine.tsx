@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { api } from '@/utils/api';
 
 import { smartClean } from '@/utils/formatters';
@@ -18,6 +18,20 @@ interface QuizEngineProps {
     questionIds: string[];
 }
 
+type QuizMode = 'all' | 'one';
+const MODE_KEY = 'quiz_mode';
+const LETTERS = 'ABCDEFGH';
+
+const SHORTCUTS: [string, string][] = [
+    ['A–H', 'Pick or unpick an answer'],
+    ['1–4', 'Rate confidence (before submitting) or satisfaction (after)'],
+    ['→ / J', 'Next question'],
+    ['← / K', 'Previous question'],
+    ['Enter', 'Next question'],
+    ['Ctrl + Enter', 'Submit all answers'],
+    ['?', 'Show or hide these shortcuts'],
+];
+
 interface RatingPickerProps {
     current: number | undefined;
     onSelect: (val: number | undefined) => void;
@@ -34,6 +48,20 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
     const [hasSubmitted, setHasSubmitted] = useState(false);
     const [seconds, setSeconds] = useState(0);
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    // The question the keyboard acts on; in one-at-a-time mode, the one on screen
+    const [active, setActive] = useState(0);
+    const [mode, setMode] = useState<QuizMode>('all');
+    const [showHelp, setShowHelp] = useState(false);
+    const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+    useEffect(() => {
+        try { if (localStorage.getItem(MODE_KEY) === 'one') setMode('one'); } catch { /* storage unavailable */ }
+    }, []);
+
+    const changeMode = (m: QuizMode) => {
+        setMode(m);
+        try { localStorage.setItem(MODE_KEY, m); } catch { /* storage unavailable */ }
+    };
 
     const formatTime = (totalSeconds: number) => {
         const mins = Math.floor(totalSeconds / 60);
@@ -162,6 +190,58 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
         }
     };
 
+    const goTo = useCallback((index: number) => {
+        const next = Math.max(0, Math.min(questions.length - 1, index));
+        setActive(next);
+        if (mode === 'all') cardRefs.current[next]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        else window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, [questions.length, mode]);
+
+    const rate = useCallback((qId: string, val: number | undefined) => {
+        if (hasSubmitted) handleSatisfactionUpdate(qId, val);
+        else setRatings(prev => ({ ...prev, [qId]: val }));
+        // handleSatisfactionUpdate changes every render; reading it here is what the buttons do too
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [hasSubmitted, activityIds, userSelections, questions]);
+
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => {
+            const target = e.target as HTMLElement;
+            if (target.closest('input, textarea, select, [contenteditable="true"]') || e.altKey || e.metaKey) return;
+            const q = questions[active];
+            if (!q) return;
+            const key = e.key;
+            if (key === 'Enter' && e.ctrlKey) {
+                if (!hasSubmitted && !isSubmitting) { e.preventDefault(); handleAllSubmit(); }
+                return;
+            }
+            if (e.ctrlKey) return;
+            const letter = LETTERS.indexOf(key.toUpperCase());
+            if (key.length === 1 && letter >= 0 && letter < q.options.length && !hasSubmitted) {
+                e.preventDefault();
+                toggleOption(q.id, q.options[letter]);
+            } else if (/^[1-4]$/.test(key)) {
+                e.preventDefault();
+                const val = Number(key);
+                rate(q.id, (hasSubmitted ? satisfaction[q.id] : ratings[q.id]) === val ? undefined : val);
+            } else if (key === 'ArrowRight' || key === 'j' || key === 'J' || key === 'Enter') {
+                // Enter on a focused button should press it, not skip ahead
+                if (key === 'Enter' && target.closest('button, a')) return;
+                e.preventDefault();
+                goTo(active + 1);
+            } else if (key === 'ArrowLeft' || key === 'k' || key === 'K') {
+                e.preventDefault();
+                goTo(active - 1);
+            } else if (key === '?') {
+                setShowHelp(h => !h);
+            }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+        // handleAllSubmit and toggleOption are plain functions over the same state listed here
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [questions, active, hasSubmitted, isSubmitting, ratings, satisfaction, userSelections, goTo, rate]);
+
     const RatingPicker = ({ current, onSelect, label }: RatingPickerProps) => (
         <div style={{ marginTop: '15px' }}>
             <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '8px' }}>{label}</label>
@@ -186,7 +266,36 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
 
     return (
         <div style={{ color: 'inherit' }}>
-            <div style={{ textAlign: 'right', marginBottom: '1rem', fontWeight: 'bold', opacity: 0.8 }}>⏱️ {formatTime(seconds)}</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '1rem' }}>
+                <div role="group" aria-label="Show questions" style={{ display: 'flex', border: '1px solid rgba(128,128,128,0.3)', borderRadius: '8px', overflow: 'hidden', fontSize: '0.8rem' }}>
+                    {([['all', 'All at once'], ['one', 'One at a time']] as [QuizMode, string][]).map(([m, text]) => (
+                        <button key={m} aria-pressed={mode === m} onClick={() => changeMode(m)}
+                            style={{ padding: '6px 12px', border: 'none', cursor: 'pointer', color: mode === m ? 'white' : 'inherit', background: mode === m ? '#0070f3' : 'transparent' }}>
+                            {text}
+                        </button>
+                    ))}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <button onClick={() => setShowHelp(h => !h)} aria-expanded={showHelp}
+                        style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontSize: '0.8rem', padding: 0 }}>
+                        ⌨ Shortcuts
+                    </button>
+                    <span style={{ fontWeight: 'bold', opacity: 0.8 }}>⏱️ {formatTime(seconds)}</span>
+                </div>
+            </div>
+
+            {showHelp && (
+                <div style={{ marginBottom: '1rem', padding: '12px 16px', borderRadius: '10px', border: '1px solid rgba(128,128,128,0.25)', background: 'rgba(128,128,128,0.05)', fontSize: '0.85rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '6px 16px' }}>
+                        {SHORTCUTS.map(([k, what]) => (
+                            <React.Fragment key={k}>
+                                <kbd style={{ fontFamily: 'inherit', fontWeight: 'bold', whiteSpace: 'nowrap' }}>{k}</kbd><span style={{ opacity: 0.8 }}>{what}</span>
+                            </React.Fragment>
+                        ))}
+                    </div>
+                    <p style={{ margin: '8px 0 0', opacity: 0.6, fontSize: '0.75rem' }}>Keys act on the outlined question. Click a question to choose it. An answer is saved to your history once it has a rating.</p>
+                </div>
+            )}
 
             {hasSubmitted && (
                 <div style={{ padding: '1.5rem', borderRadius: '12px', border: '2px solid #0070f3', marginBottom: '2rem', textAlign: 'center', background: 'rgba(128,128,128,0.05)' }}>
@@ -200,13 +309,20 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
                 </div>
             )}
 
-            {questions.map((q, idx) => {
+            {(mode === 'one' ? questions.slice(active, active + 1) : questions).map((q, i) => {
+                const idx = mode === 'one' ? active : i;
+                const isActive = idx === active && questions.length > 1;
                 const isTracked = hasSubmitted ? !!activityIds[q.id] : ratings[q.id] !== undefined;
                 const selected = userSelections[q.id] || [];
                 const isCorrect = selected.length === q.correct_answers.length && selected.every(val => q.correct_answers.includes(val));
 
                 return (
-                    <div key={q.id} style={{ marginBottom: '2rem', padding: '1.5rem', background: 'rgba(128,128,128,0.05)', borderRadius: '12px', border: '1px solid rgba(128,128,128,0.2)', position: 'relative' }}>
+                    <div key={q.id} ref={el => { cardRefs.current[idx] = el; }} onMouseDown={() => setActive(idx)}
+                        style={{
+                            marginBottom: mode === 'one' ? '1rem' : '2rem', padding: '1.5rem', background: 'rgba(128,128,128,0.05)', borderRadius: '12px', position: 'relative',
+                            border: isActive && mode === 'all' ? '1px solid #0070f3' : '1px solid rgba(128,128,128,0.2)',
+                            boxShadow: isActive && mode === 'all' ? '0 0 0 1px #0070f3' : 'none', scrollMarginTop: '12px',
+                        }}>
                         <div style={{ marginBottom: '1rem', padding: '0.5rem' }}>
                             {hasSubmitted && (
                                 <span style={{ fontSize: '1.0rem', fontWeight: 'bold', color: isCorrect ? '#10b981' : '#ef4444' }}>
@@ -234,10 +350,12 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
                                                 color: 'inherit',
                                                 cursor: 'pointer',
                                                 backgroundColor: wasSelected ? '#444' : 'transparent',
-                                                border: '1px solid #444'
+                                                border: '1px solid #444',
+                                                display: 'flex', gap: '10px', alignItems: 'baseline',
                                             }}
                                         >
-                                            {opt}
+                                            <span style={{ fontWeight: 'bold', opacity: 0.6, flexShrink: 0 }}>{LETTERS[optIdx]}.</span>
+                                            <span>{opt}</span>
                                         </button>
                                     );
                                 }
@@ -256,7 +374,7 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
                                             background: 'transparent',
                                         }}
                                     >
-                                        <span>{opt}</span>
+                                        <span><span style={{ fontWeight: 'bold', opacity: 0.6, marginRight: '10px' }}>{LETTERS[optIdx]}.</span>{opt}</span>
                                         <span style={{
                                             fontSize: '1.1rem',
                                             fontWeight: 'bold',
@@ -293,7 +411,7 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
                         <RatingPicker
                             label={hasSubmitted ? "Update Satisfaction (1-4)" : "Confidence Level (1-4)"}
                             current={hasSubmitted ? satisfaction[q.id] : ratings[q.id]}
-                            onSelect={(val: number | undefined) => hasSubmitted ? handleSatisfactionUpdate(q.id, val) : setRatings({ ...ratings, [q.id]: val })}
+                            onSelect={(val: number | undefined) => rate(q.id, val)}
                         />
 
                         <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '10px', marginTop: '12px' }}>
@@ -306,6 +424,41 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
                     </div>
                 );
             })}
+
+            {mode === 'one' && questions.length > 1 && (
+                <div style={{ marginBottom: '1.5rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                        <button onClick={() => goTo(active - 1)} disabled={active === 0}
+                            style={{ padding: '10px 18px', borderRadius: '8px', border: '1px solid rgba(128,128,128,0.4)', background: 'transparent', color: 'inherit', cursor: 'pointer', opacity: active === 0 ? 0.4 : 1 }}>
+                            ← Previous
+                        </button>
+                        <span style={{ fontSize: '0.9rem', opacity: 0.8 }}>Question {active + 1} of {questions.length}</span>
+                        <button onClick={() => goTo(active + 1)} disabled={active === questions.length - 1}
+                            style={{ padding: '10px 18px', borderRadius: '8px', border: 'none', background: '#0070f3', color: 'white', cursor: 'pointer', opacity: active === questions.length - 1 ? 0.4 : 1 }}>
+                            Next →
+                        </button>
+                    </div>
+                    <div aria-label="Jump to question" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', justifyContent: 'center' }}>
+                        {questions.map((q, i) => {
+                            const answered = (userSelections[q.id] || []).length > 0;
+                            const sel = userSelections[q.id] || [];
+                            const right = hasSubmitted && sel.length === q.correct_answers.length && sel.every(v => q.correct_answers.includes(v));
+                            const bg = hasSubmitted ? (right ? '#10b981' : '#ef4444') : answered ? '#444' : 'transparent';
+                            return (
+                                <button key={q.id} onClick={() => goTo(i)} aria-current={i === active ? 'step' : undefined}
+                                    aria-label={`Question ${i + 1}${answered ? ', answered' : ''}`}
+                                    style={{
+                                        width: '30px', height: '30px', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer',
+                                        border: i === active ? '2px solid #0070f3' : '1px solid rgba(128,128,128,0.4)',
+                                        background: bg, color: hasSubmitted || answered ? 'white' : 'inherit',
+                                    }}>
+                                    {i + 1}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
 
             <button onClick={hasSubmitted ? () => window.location.reload() : handleAllSubmit} disabled={isSubmitting}
                 style={{ width: '100%', padding: '15px', background: hasSubmitted ? '#10b981' : '#0070f3', color: 'white', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer', transition: 'filter 0.2s' }}>
