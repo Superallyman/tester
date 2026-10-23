@@ -14,6 +14,7 @@ export interface ExamConfig {
     count: number;
     timeLimitSec: number | null; // null = untimed
     saveToHistory: boolean;
+    challengeId?: string; // taking (or having just created) this challenge; the result becomes the entry
 }
 
 // Word-level marks made with the Highlight / Strikethrough tools.

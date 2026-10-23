@@ -17,6 +17,7 @@ import {
     listExams, reconcileInProgress,
 } from './examSync';
 import { blueprintSample } from './blueprint';
+import { Challenge } from './Challenges';
 
 type Phase = 'setup' | 'exam' | 'results';
 
@@ -42,6 +43,14 @@ export default function PracticeExamPage() {
     };
 
     const refreshHistory = useCallback(() => listExams().then(l => { setHistory(l.finished); return l; }), []);
+
+    // Challenges follow the leaderboard switch
+    const canChallenge = session?.user?.canSeeLeaderboard !== false && !!email;
+    const [challenges, setChallenges] = useState<Challenge[] | null>(null);
+    const refreshChallenges = useCallback(() => {
+        api<Challenge[]>('/api/challenges').then(setChallenges, () => setChallenges([]));
+    }, []);
+    useEffect(() => { if (canChallenge) refreshChallenges(); }, [canChallenge, refreshChallenges]);
 
     // The browser's copy shows at once; then the server's list decides what to resume and fills in history
     useEffect(() => {
@@ -85,7 +94,66 @@ export default function PracticeExamPage() {
         return () => { document.body.style.overflow = prev; };
     }, [phase]);
 
-    const startExam = async (config: ExamConfig, filter: PoolFilter, categories: string[]) => {
+    // Builds an exam on exactly these questions, in this order, and opens it
+    const launch = async (ids: string[], config: ExamConfig) => {
+        const rows = await api<ExamQuestion[]>('/api/questions', { body: { ids } });
+        const byId = new Map(rows.map(r => [r.id, r]));
+        const questions: ExamQuestion[] = ids
+            .map(id => byId.get(id))
+            .filter((q): q is ExamQuestion => !!q)
+            .map(q => ({
+                id: q.id,
+                category: normalizeCategory(q.category),
+                question_text: smartClean(q.question_text),
+                options: q.options.map(smartClean),
+                correct_answers: q.correct_answers.map(smartClean),
+                explanation: smartClean(q.explanation || ''),
+            }));
+
+        const state: ExamState = {
+            version: 1,
+            id: newExamId(),
+            startedAt: new Date().toISOString(),
+            config: { ...config, count: questions.length },
+            questionIds: questions.map(q => q.id),
+            answers: {},
+            flags: [],
+            seen: questions.length ? [questions[0].id] : [],
+            critiques: {},
+            notes: '',
+            marks: {},
+            current: 0,
+            remainingSec: config.timeLimitSec,
+            elapsedSec: 0,
+            phase: 'exam',
+            reviewQueue: null,
+            colorScheme: 'default',
+            timeSpent: {},
+        };
+        // Starting doesn't wait on the server: if this fails, the exam is uploaded the next time the page loads
+        const serverId = await createRemoteExam(state, questions).catch(err => { console.error(err); return undefined; });
+        keepLocal({ state: { ...state, serverId }, questions });
+        setPhase('exam');
+    };
+
+    const takeChallenge = async (id: string) => {
+        setBusy(true);
+        setError(null);
+        try {
+            const c = await api<{ title: string; question_ids: string[]; time_limit_sec: number | null }>(`/api/challenges/${id}`);
+            await launch(c.question_ids, {
+                label: `Challenge: ${c.title}`, count: c.question_ids.length, timeLimitSec: c.time_limit_sec, saveToHistory: true, challengeId: id,
+            });
+        } catch (err) {
+            console.error(err);
+            setError('Could not open that challenge. Check your connection and try again.');
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    // challengeTitle: also publish the exam as a challenge with this name
+    const startExam = async (config: ExamConfig, filter: PoolFilter, categories: string[], challengeTitle?: string) => {
         setBusy(true);
         setError(null);
         try {
@@ -110,44 +178,13 @@ export default function PracticeExamPage() {
             }
 
             const ids = blueprintSample(pool, config.count);
-            const rows = await api<ExamQuestion[]>('/api/questions', { body: { ids } });
-            const byId = new Map(rows.map(r => [r.id, r]));
-            const questions: ExamQuestion[] = ids
-                .map(id => byId.get(id))
-                .filter((q): q is ExamQuestion => !!q)
-                .map(q => ({
-                    id: q.id,
-                    category: normalizeCategory(q.category),
-                    question_text: smartClean(q.question_text),
-                    options: q.options.map(smartClean),
-                    correct_answers: q.correct_answers.map(smartClean),
-                    explanation: smartClean(q.explanation || ''),
-                }));
-
-            const state: ExamState = {
-                version: 1,
-                id: newExamId(),
-                startedAt: new Date().toISOString(),
-                config: { ...config, count: questions.length },
-                questionIds: questions.map(q => q.id),
-                answers: {},
-                flags: [],
-                seen: questions.length ? [questions[0].id] : [],
-                critiques: {},
-                notes: '',
-                marks: {},
-                current: 0,
-                remainingSec: config.timeLimitSec,
-                elapsedSec: 0,
-                phase: 'exam',
-                reviewQueue: null,
-                colorScheme: 'default',
-                timeSpent: {},
-            };
-            // Starting doesn't wait on the server: if this fails, the exam is uploaded the next time the page loads
-            const serverId = await createRemoteExam(state, questions).catch(err => { console.error(err); return undefined; });
-            keepLocal({ state: { ...state, serverId }, questions });
-            setPhase('exam');
+            let challengeId: string | undefined;
+            if (challengeTitle !== undefined) {
+                challengeId = (await api<{ id: string }>('/api/challenges', {
+                    body: { title: challengeTitle, questionIds: ids, timeLimitSec: config.timeLimitSec },
+                })).id;
+            }
+            await launch(ids, { ...config, challengeId });
         } catch (err) {
             console.error(err);
             setError('Could not build the exam. Check your connection and try again.');
@@ -214,6 +251,10 @@ export default function PracticeExamPage() {
         try {
             const id = state.serverId ?? await createRemoteExam(state, questions);
             await finishRemoteExam(id, state, summary);
+            if (state.config.challengeId) {
+                await api(`/api/challenges/${state.config.challengeId}/entry`, { body: { examId: id } });
+                refreshChallenges();
+            }
             refreshHistory().catch(console.error);
         } catch (err) {
             console.error(err);
@@ -253,6 +294,12 @@ export default function PracticeExamPage() {
             signedIn={!!email}
             resumable={saved ? { state: saved.state, total: saved.questions.length } : null}
             history={history}
+            challenges={canChallenge ? challenges : null}
+            onTakeChallenge={takeChallenge}
+            onDeleteChallenge={async id => {
+                await api(`/api/challenges/${id}`, { method: 'DELETE' }).catch(console.error);
+                refreshChallenges();
+            }}
             busy={busy}
             error={error ?? syncError}
             onStart={startExam}

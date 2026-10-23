@@ -12,8 +12,19 @@ unset NODE_PATH
 
 files=("$@")
 [ ${#files[@]} -eq 0 ] && files=(tests/e2e/*.mts)
+base="${TEST_BASE_URL:-http://localhost:3000}"
+# The dev server restarts itself when it nears its memory limit (likely on a small VM); wait until it answers
+wait_for_server() {
+  for _ in $(seq 60); do
+    curl -s -o /dev/null -m 5 "$base/api/auth/providers" && return 0
+    sleep 1
+  done
+  echo "dev server at $base is not answering"; return 1
+}
+
 status=0
 for f in "${files[@]}"; do
+  wait_for_server || exit 1
   echo "=== $f"
   npx tsx --env-file=.env.local "$f" 2>&1 | grep -v "Skipping host requirements" || true
   [ "${PIPESTATUS[0]}" -eq 0 ] || status=1

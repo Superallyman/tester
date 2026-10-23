@@ -6,6 +6,7 @@ import { api } from '@/utils/api';
 import { EXAM_PRESETS, ExamConfig, ExamState, SECONDS_PER_ITEM, formatClock } from './examUtils';
 import { FinishedExam } from './examSync';
 import PastExams from './PastExams';
+import Challenges, { Challenge } from './Challenges';
 import { BLUEPRINT, BLUEPRINT_SOURCE, SCORED_ITEMS, blueprintKey, blueprintQuotas } from './blueprint';
 
 export type PoolFilter = 'all' | 'unseen' | 'notMastered' | 'missed';
@@ -14,9 +15,12 @@ interface ExamSetupProps {
     signedIn: boolean;
     resumable: { state: ExamState; total: number } | null;
     history: FinishedExam[] | null; // null while loading
+    challenges: Challenge[] | null;  // null when challenges are off for this account (or still loading)
+    onTakeChallenge: (id: string) => void;
+    onDeleteChallenge: (id: string) => void;
     busy: boolean;
     error: string | null;
-    onStart: (config: ExamConfig, filter: PoolFilter, categories: string[]) => void;
+    onStart: (config: ExamConfig, filter: PoolFilter, categories: string[], challengeTitle?: string) => void;
     onResume: () => void;
     onDiscardResume: () => void;
     onReview: (id: string) => void;
@@ -32,12 +36,16 @@ const card: React.CSSProperties = {
 
 const label: React.CSSProperties = { fontSize: '0.65rem', opacity: 0.6, letterSpacing: '0.05em', display: 'block', marginBottom: 6 };
 
-export default function ExamSetup({ signedIn, resumable, history, busy, error, onStart, onResume, onDiscardResume, onReview, onDelete }: ExamSetupProps) {
+export default function ExamSetup({
+    signedIn, resumable, history, challenges, busy, error, onStart, onResume, onDiscardResume, onReview, onDelete, onTakeChallenge, onDeleteChallenge,
+}: ExamSetupProps) {
     const [preset, setPreset] = useState<string>('block');
     const [customCount, setCustomCount] = useState(25);
     const [timed, setTimed] = useState(true);
     const [filter, setFilter] = useState<PoolFilter>('all');
     const [saveToHistory, setSaveToHistory] = useState(true);
+    const [asChallenge, setAsChallenge] = useState(false);
+    const [challengeTitle, setChallengeTitle] = useState('');
     const [categories, setCategories] = useState<{ name: string; count: number }[]>([]);
     const [selectedCats, setSelectedCats] = useState<string[]>([]);
     const [showCats, setShowCats] = useState(false);
@@ -76,7 +84,10 @@ export default function ExamSetup({ signedIn, resumable, history, busy, error, o
     const toggleCat = (name: string) =>
         setSelectedCats(prev => (prev.includes(name) ? prev.filter(c => c !== name) : [...prev, name]));
 
-    const start = () => onStart({ label: label_, count, timeLimitSec, saveToHistory: signedIn && saveToHistory }, filter, selectedCats);
+    const start = () => onStart(
+        { label: label_, count, timeLimitSec, saveToHistory: signedIn && saveToHistory }, filter, selectedCats,
+        challenges && asChallenge ? (challengeTitle.trim() || `${label_} challenge`) : undefined,
+    );
 
     const optionButton = (active: boolean): React.CSSProperties => ({
         padding: '12px',
@@ -259,6 +270,19 @@ export default function ExamSetup({ signedIn, resumable, history, busy, error, o
                     Save answered items to my History &amp; Performance Analytics
                 </label>
                 {!signedIn && <p style={{ fontSize: '0.8rem', margin: '6px 0 0', opacity: 0.7 }}>Sign in to save results and use the pool filters.</p>}
+                {challenges && (
+                    <div style={{ marginTop: 10 }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.9rem', cursor: 'pointer' }}>
+                            <input type="checkbox" checked={asChallenge} onChange={e => setAsChallenge(e.target.checked)} />
+                            Also make it a challenge: others take exactly these questions and you compare scores
+                        </label>
+                        {asChallenge && (
+                            <input value={challengeTitle} onChange={e => setChallengeTitle(e.target.value)} maxLength={120} aria-label="Challenge name"
+                                placeholder={`${label_} challenge`}
+                                style={{ marginTop: 8, width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(128,128,128,0.35)', background: 'transparent', color: 'inherit' }} />
+                        )}
+                    </div>
+                )}
             </section>
 
             {error && <p style={{ color: '#ef4444', textAlign: 'center', fontWeight: 500 }}>{error}</p>}
@@ -284,6 +308,7 @@ export default function ExamSetup({ signedIn, resumable, history, busy, error, o
                 </ul>
             </details>
 
+            {challenges && <Challenges challenges={challenges} busy={busy} onTake={onTakeChallenge} onDelete={onDeleteChallenge} />}
             <PastExams history={history} onReview={onReview} onDelete={onDelete} />
         </main>
     );
