@@ -1,10 +1,10 @@
 "use client"
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { api } from '@/utils/api';
+import { api, qs } from '@/utils/api';
 import { BLUEPRINT } from '@/app/exam/blueprint';
 import {
-    ActivityRow, MIN_ATTEMPTS_PER_CELL, MIN_ATTEMPTS_TO_RANK, ROW_LABELS, UserStats, Window, buildStats, pct,
+    MIN_ATTEMPTS_PER_CELL, MIN_ATTEMPTS_TO_RANK, ROW_LABELS, UserStats, Window, pct,
 } from './stats';
 
 type SortKey = 'accuracy' | 'firstTry' | 'attempts' | 'mastered' | 'streak';
@@ -65,19 +65,18 @@ const relativeDay = (iso: string | null) => {
 export default function LeaderboardPage() {
     const [me, setMe] = useState<string | null>(null);
 
-    const [rows, setRows] = useState<ActivityRow[] | null>(null);
-    const [bankSize, setBankSize] = useState(0);
+    const [windows, setWindows] = useState<Record<Window, UserStats[]> | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [timeWindow, setTimeWindow] = useState<Window>('all');
     const [sort, setSort] = useState<SortKey>('accuracy');
 
     useEffect(() => {
         let cancelled = false;
-        api<{ me: string; bankSize: number; rows: ActivityRow[] }>('/api/leaderboard')
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        api<{ me: string; bankSize: number; windows: Record<Window, UserStats[]> }>(`/api/leaderboard${qs({ tz })}`)
             .then(data => {
                 if (cancelled) return;
-                setRows(data.rows);
-                setBankSize(data.bankSize);
+                setWindows(data.windows);
                 setMe(data.me);
             })
             .catch(err => {
@@ -87,7 +86,7 @@ export default function LeaderboardPage() {
         return () => { cancelled = true; };
     }, []);
 
-    const users = useMemo(() => (rows ? buildStats(rows, timeWindow, bankSize).filter(u => u.attempts > 0) : []), [rows, timeWindow, bankSize]);
+    const users = useMemo(() => windows?.[timeWindow] ?? [], [windows, timeWindow]);
     const sortDef = SORTS.find(s => s.key === sort)!;
 
     const { ranked, unranked } = useMemo(() => {
@@ -153,8 +152,8 @@ export default function LeaderboardPage() {
             </div>
 
             {error && <p style={{ color: '#ef4444' }}>{error}</p>}
-            {!rows && !error && <p style={{ opacity: 0.6 }}>Loading everyone&apos;s activity…</p>}
-            {rows && users.length === 0 && <p style={{ opacity: 0.6 }}>No activity in this time window yet.</p>}
+            {!windows && !error && <p style={{ opacity: 0.6 }}>Loading the leaderboard…</p>}
+            {windows && users.length === 0 && <p style={{ opacity: 0.6 }}>No activity in this time window yet.</p>}
 
             {users.length > 0 && (
                 <>

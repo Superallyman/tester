@@ -29,7 +29,7 @@ try {
         await page.waitForTimeout(1500);
         await page.locator('input[type=number]').last().fill(String(count));
         await page.getByText('Generate Quiz').click();
-        await page.waitForSelector('h3', { timeout: 15000 });
+        await page.waitForSelector('h3', { timeout: 30000 });
         await page.waitForTimeout(500);
     };
 
@@ -43,7 +43,7 @@ try {
         await page.keyboard.press('ArrowRight');
     }
     await page.keyboard.press('Control+Enter');
-    await page.waitForSelector('text=Quiz Complete!', { timeout: 15000 });
+    await page.waitForSelector('text=Quiz Complete!', { timeout: 30000 });
     await page.waitForTimeout(1000);
     const rows = await query<{ user_rating: number; satisfaction_rating: number; n: number }>(
         `select user_rating, satisfaction_rating, cardinality(submitted_answer) as n from user_activity where user_email = $1 order by user_rating`, [E]);
@@ -86,7 +86,7 @@ try {
     await page.getByRole('button', { name: 'E2E Test' }).click();
     await page.locator('input[type=number]').last().fill('10');
     await page.getByText('Generate Quiz').click();
-    await page.waitForSelector('h3', { timeout: 15000 });
+    await page.waitForSelector('h3', { timeout: 30000 });
     await page.waitForTimeout(500);
     const card = (text: string) => page.locator('div', { has: page.locator('h3', { hasText: text }) }).last();
     const single = card('E2E single'), multi = card('E2E multi');

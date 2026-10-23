@@ -1,4 +1,5 @@
-// stats.ts — per-user leaderboard aggregates built from the shared user_activity table
+// stats.ts — per-user leaderboard aggregates built from the shared user_activity table.
+// Runs on the server (/api/leaderboard), so browsers get totals instead of everyone's attempts.
 
 import { BLUEPRINT, blueprintKey } from '@/app/exam/blueprint';
 
@@ -32,15 +33,27 @@ export interface UserStats {
     byRow: Record<string, Tally>;
 }
 
-// Accounts that never show on the board
-const HIDDEN = new Set(['anonymous', 'claude-e2e']);
+// Accounts that never show on the board: placeholder rows and the e2e tests' throwaway accounts
+const isHidden = (user: string) => user === 'anonymous' || user.startsWith('claude-e2e');
 
 export const MIN_ATTEMPTS_TO_RANK = 25;
 export const MIN_ATTEMPTS_PER_CELL = 8;
 
-const dayKey = (iso: string) => {
-    const d = new Date(iso);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+// Calendar day (YYYY-MM-DD) of a moment in the viewer's time zone, so streaks roll over at their midnight
+const dayFormatter = (timeZone: string) => {
+    const f = new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' });
+    return (iso: string | Date) => f.format(new Date(iso));
+};
+
+/** The day before a YYYY-MM-DD key; pure calendar arithmetic, independent of any time zone */
+const dayBefore = (key: string) => {
+    const d = new Date(`${key}T12:00:00Z`);
+    d.setUTCDate(d.getUTCDate() - 1);
+    return d.toISOString().slice(0, 10);
+};
+
+export const isTimeZone = (tz: string) => {
+    try { new Intl.DateTimeFormat('en-CA', { timeZone: tz }); return true; } catch { return false; }
 };
 
 const categoryOf = (row: ActivityRow) => {
@@ -55,34 +68,34 @@ export const ROW_LABELS: Record<string, string> = {
     other: 'Other',
 };
 
-const streaks = (days: Set<string>) => {
+const streaks = (days: Set<string>, today: string) => {
     const sorted = [...days].sort();
     let best = 0;
     let run = 0;
-    let prev: Date | null = null;
+    let prev: string | null = null;
     sorted.forEach(k => {
-        const d = new Date(`${k}T00:00:00`);
-        run = prev && Math.round((d.getTime() - prev.getTime()) / 86400000) === 1 ? run + 1 : 1;
+        run = prev && dayBefore(k) === prev ? run + 1 : 1;
         best = Math.max(best, run);
-        prev = d;
+        prev = k;
     });
 
     // Current streak survives until the end of today, so yesterday still counts
-    const cursor = new Date();
-    if (!days.has(dayKey(cursor.toISOString()))) cursor.setDate(cursor.getDate() - 1);
+    let cursor = days.has(today) ? today : dayBefore(today);
     let current = 0;
-    while (days.has(dayKey(cursor.toISOString()))) {
+    while (days.has(cursor)) {
         current++;
-        cursor.setDate(cursor.getDate() - 1);
+        cursor = dayBefore(cursor);
     }
     return { current, best };
 };
 
-export const buildStats = (rows: ActivityRow[], window: Window, bankSize: number): UserStats[] => {
+export const buildStats = (rows: ActivityRow[], window: Window, bankSize: number, timeZone = 'UTC'): UserStats[] => {
     const since = window === 'all' ? 0 : Date.now() - Number(window) * 86400000;
+    const dayKey = dayFormatter(timeZone);
+    const today = dayKey(new Date());
     const byUser = new Map<string, ActivityRow[]>();
     rows.forEach(r => {
-        if (!r.user || HIDDEN.has(r.user)) return;
+        if (!r.user || isHidden(r.user)) return;
         // Blank submissions are skips or bulk-inserted dev data, not real attempts
         if (!r.answered) return;
         if (!byUser.has(r.user)) byUser.set(r.user, []);
@@ -92,7 +105,7 @@ export const buildStats = (rows: ActivityRow[], window: Window, bankSize: number
     return [...byUser.entries()].map(([key, all]) => {
         all.sort((a, b) => a.attempted_at.localeCompare(b.attempted_at));
         const allDays = new Set(all.map(r => dayKey(r.attempted_at)));
-        const { current, best } = streaks(allDays);
+        const { current, best } = streaks(allDays, today);
 
         const firstSeen = new Set<string>();
         const firstTry: Tally = { correct: 0, total: 0 };

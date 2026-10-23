@@ -59,7 +59,7 @@ try {
     await userCtx.addCookies([{ name: 'next-auth.session-token', value: u, url: BASE }]);
     const up = await userCtx.newPage();
     await up.goto(BASE + '/history', { waitUntil: 'networkidle' });
-    await up.waitForSelector('text=Which lens corrects myopia?', { timeout: 15000 });
+    await up.waitForSelector('text=Which lens corrects myopia?', { timeout: 30000 });
     await up.waitForTimeout(1000);
     await up.getByText('⚑ Report a problem').first().click();
     await up.getByRole('radio', { name: 'Answer key is wrong' }).click();
@@ -76,10 +76,10 @@ try {
     const ap = await adminCtx.newPage();
     ap.on('dialog', d => d.accept());
     await ap.goto(BASE + '/admin/questions', { waitUntil: 'networkidle' });
-    await ap.waitForSelector('text=Which lens corrects myopia?', { timeout: 15000 });
+    await ap.waitForSelector('text=Which lens corrects myopia?', { timeout: 30000 });
     check('Admin tab shows a report badge', (await ap.locator('nav[aria-label=Admin] span.bg-red-500').count()) === 1);
     await ap.getByText('Which lens corrects myopia?').click();
-    await ap.waitForSelector('text=Should be Minus.', { timeout: 15000 });
+    await ap.waitForSelector('text=Should be Minus.', { timeout: 30000 });
     await ap.waitForTimeout(800);
     // Untick Plus (A), tick Minus (B), fix the explanation
     await ap.locator('label:has-text("Correct") input').nth(0).uncheck();

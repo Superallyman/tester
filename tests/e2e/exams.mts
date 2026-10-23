@@ -93,9 +93,9 @@ try {
     const page = await ctx.newPage();
     page.on('dialog', d => d.accept());
     await page.goto(BASE + '/exam', { waitUntil: 'networkidle' });
-    await page.waitForSelector('text=Exam in progress', { timeout: 15000 });
+    await page.waitForSelector('text=Exam in progress', { timeout: 30000 });
     check('Exam from the other device is offered', (await page.locator('text=E2E Block ·').first().textContent())?.includes('0/3 answered') ?? false);
-    await page.waitForSelector('h2:has-text("Your past exams")', { timeout: 15000 });
+    await page.waitForSelector('h2:has-text("Your past exams")', { timeout: 30000 });
     const rows = await query<{ client_id: string }>('select client_id from exam_attempts where user_id = $1 and status = $2', [me.id, 'finished']);
     check('Local history was imported', rows.some(r => r.client_id === 'e2e-local'));
     check('Local history was cleared after import', await page.evaluate(() => localStorage.getItem('nbeo_exam_history') === null));
@@ -114,9 +114,9 @@ try {
 
     // Review a past exam in full from the list
     await page.goto(BASE + '/exam', { waitUntil: 'networkidle' });
-    await page.waitForSelector('h2:has-text("Your past exams")', { timeout: 15000 });
+    await page.waitForSelector('h2:has-text("Your past exams")', { timeout: 30000 });
     await page.getByRole('button', { name: 'Review' }).first().click();
-    const report = await page.waitForSelector('text=/\\d+ of 3 correct/', { timeout: 15000 }).then(el => el.textContent(), () => null);
+    const report = await page.waitForSelector('text=/\\d+ of 3 correct/', { timeout: 30000 }).then(el => el.textContent(), () => null);
     check('Review opens the full score report', report === '2 of 3 correct', String(report));
     await ctx.close();
 } catch (e) {

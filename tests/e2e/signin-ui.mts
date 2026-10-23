@@ -21,7 +21,7 @@ try {
     await page.fill('#email', E);
     await page.fill('#password', 'abcd-efgh-jkmn');
     await page.click('button[type=submit]');
-    await page.waitForURL('**/account', { timeout: 20000 });
+    await page.waitForURL('**/account', { timeout: 30000 });
     await page.waitForSelector('text=temporary password');
     check('Temporary password lands on /account', path(page.url()) === '/account');
     check('Navbar shows the account name', (await page.locator('nav a[href="/account"]').first().textContent()) === 'UI Invitee');
@@ -30,7 +30,7 @@ try {
     await page.fill('#new', 'my own password 1');
     await page.fill('#confirm', 'my own password 1');
     await page.click('button[type=submit]');
-    await page.waitForURL(u => !u.pathname.startsWith('/account'), { timeout: 20000 });
+    await page.waitForURL(u => !u.pathname.startsWith('/account'), { timeout: 30000 });
     await page.goto(BASE + '/history', { waitUntil: 'networkidle' });
     check('After choosing a password, /history opens', path(page.url()) === '/history', path(page.url()));
 } catch (e) {

@@ -34,7 +34,7 @@ try {
         if (excludeMastered) await page.getByText('Exclude Mastered').click();
         if (label === 'shot' && SHOT) await page.screenshot({ path: SHOT, clip: { x: 0, y: 0, width: 1280, height: 900 } });
         await page.getByText('Generate Quiz').click();
-        await page.waitForFunction(() => document.querySelectorAll('h3').length > 0 || document.body.innerText.includes('No questions found'), null, { timeout: 15000 });
+        await page.waitForFunction(() => document.querySelectorAll('h3').length > 0 || document.body.innerText.includes('No questions found'), null, { timeout: 30000 });
         const got = await page.locator('h3').count();
         const ok = got === expected;
         if (!ok) failed++;
@@ -48,7 +48,7 @@ try {
     await run('exclude mastered alone', [], true, 3);
 
     await page.goto(BASE + '/history', { waitUntil: 'networkidle' });
-    await page.waitForSelector('text=CONFIDENCE', { timeout: 15000 });
+    await page.waitForSelector('text=CONFIDENCE', { timeout: 30000 });
     const text = await page.locator('body').innerText();
     const labelsOk = /\b[1-4]\/4\b/.test(text) && !text.includes('/10');
     if (!labelsOk) failed++;

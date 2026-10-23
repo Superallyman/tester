@@ -12,11 +12,6 @@ interface SearchChip {
     ids: string[];
 }
 
-interface QuestionStat {
-    satisfaction: number | null; // from the most recent attempt that has a rating
-    mastered: boolean;
-}
-
 const SATISFACTION_LEVELS = [1, 2, 3, 4];
 
 // Fixed the "any" error by defining the expected RPC return shape
@@ -130,49 +125,24 @@ export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorP
         setNoResults(false);
 
         try {
-            const activityData = await api<{ question_id: string; is_correct: boolean; satisfaction_rating: number | null }[]>('/api/activity');
-
-            // Attempts come oldest first, so a later rating replaces an earlier one
-            const statsByQuestion: Record<string, QuestionStat> = {};
-            activityData.forEach(a => {
-                const stats = statsByQuestion[a.question_id] ??= { satisfaction: null, mastered: false };
-                if (a.satisfaction_rating !== null) stats.satisfaction = a.satisfaction_rating;
-                if (a.is_correct) stats.mastered = true;
-            });
-
             if (hasPhraseFilters && currentPoolIds.length === 0) {
                 setNoResults(true);
-                setLoading(false);
                 return;
             }
-
-            // Phrase searches already returned question ids; otherwise ask for the (optionally category-filtered) bank
-            let baseQuestions: { id: string }[];
-            if (hasPhraseFilters) {
-                baseQuestions = currentPoolIds.map(id => ({ id }));
-            } else {
-                const targetCats = !hasCategoryFilters ? [] : includedCats.length > 0 ? includedCats : availableCategories.filter(c => !excludedCats.includes(c));
-                baseQuestions = hasCategoryFilters && targetCats.length === 0
-                    ? []
-                    : await api<{ id: string }[]>(`/api/questions${qs({ category: targetCats })}`);
-            }
-
-            const filtered = (baseQuestions || []).filter(q => {
-                const stats = statsByQuestion[q.id];
-                if (unseenOnly) return !stats;
-                if (notMasteredOnly || satisfactionLevels.length > 0) {
-                    if (!stats) return false;
-                    if (notMasteredOnly && stats.mastered) return false;
-                    return satisfactionLevels.length === 0 || (stats.satisfaction !== null && satisfactionLevels.includes(stats.satisfaction));
-                }
-                return true;
+            // The server filters against your history and draws at random; phrase searches replace the category filter
+            const ids = await api<string[]>('/api/questions/pick', {
+                body: {
+                    limit,
+                    ids: hasPhraseFilters ? currentPoolIds : undefined,
+                    include: hasPhraseFilters ? [] : includedCats,
+                    exclude: hasPhraseFilters ? [] : excludedCats,
+                    unseenOnly,
+                    excludeMastered: notMasteredOnly,
+                    satisfaction: satisfactionLevels,
+                },
             });
-
-            if (filtered.length > 0) {
-                onQuestionsFound(filtered.sort(() => 0.5 - Math.random()).slice(0, limit).map(q => q.id));
-            } else {
-                setNoResults(true);
-            }
+            if (ids.length > 0) onQuestionsFound(ids);
+            else setNoResults(true);
         } catch (err) {
             console.error(err);
         } finally {
