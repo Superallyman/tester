@@ -3,6 +3,8 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { api } from '@/utils/api';
 import { useSession } from "next-auth/react";
+import StudyHeatmap from '../components/StudyHeatmap';
+import { useProgress } from '../components/useProgress';
 
 // --- Types & Interfaces ---
 type SortType = 'alpha' | 'worst' | 'best' | 'urgency' | 'mastery' | 'frustration';
@@ -57,6 +59,7 @@ interface CategoryMapEntry {
 }
 
 export default function AnalyticsPage() {
+  const { progress } = useProgress();
   const { data: session, status } = useSession();
   const [stats, setStats] = useState<AnalyticsStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -234,6 +237,12 @@ export default function AnalyticsPage() {
           🔥 {stats.streak} Day Streak
         </div>
       </div>
+
+      {progress && (
+        <section style={{ marginBottom: '2.5rem', padding: '1.25rem', borderRadius: '12px', border: '1px solid rgba(128,128,128,0.25)' }}>
+          <StudyHeatmap days={progress.days} today={progress.today} />
+        </section>
+      )}
 
       {/* --- Overall Stats Summary Component --- */}
       <section style={{ marginBottom: '2.5rem' }}>

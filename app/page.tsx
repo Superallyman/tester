@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import QuestionSelector from './components/QuestionSelector';
 import QuizEngine from './components/QuizEngine';
+import DailyProgress from './components/DailyProgress';
 import SmartReview from './components/SmartReview';
 import { PENDING_QUIZ_KEY } from './exam/examUtils';
 
@@ -26,6 +27,7 @@ export default function PracticePage() {
 
       {activeQuestionIds.length === 0 ? (
         <div>
+          <DailyProgress />
           <SmartReview onQuestionsFound={(ids) => setActiveQuestionIds(ids)} />
           <h2 style={{ fontSize: '0.75rem', letterSpacing: '0.06em', opacity: 0.6, fontWeight: 600, margin: '1.75rem 0 0.6rem' }}>TEST CUSTOMIZER</h2>
           <QuestionSelector onQuestionsFound={(ids) => setActiveQuestionIds(ids)} />
