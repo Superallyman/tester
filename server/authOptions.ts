@@ -16,11 +16,12 @@ export interface Account {
     password_hash: string | null;
     github_login: string | null;
     is_admin: boolean;
+    can_see_leaderboard: boolean;
     disabled: boolean;
     must_change_password: boolean;
 }
 
-const COLUMNS = 'id, email, name, password_hash, github_login, is_admin, disabled, must_change_password';
+const COLUMNS = 'id, email, name, password_hash, github_login, is_admin, can_see_leaderboard, disabled, must_change_password';
 
 const accountWhere = async (where: string, value: string) =>
     (await query<Account>(`select ${COLUMNS} from app_users where ${where} = $1`, [value]))[0] as Account | undefined;
@@ -94,30 +95,35 @@ export const authOptions: NextAuthOptions = {
             await touchLogin(row.id);
             return true;
         },
-        // Stamp the account into the token at sign-in, and re-read it when the client calls update()
-        async jwt({ token, user, account, profile, trigger }) {
+        // Stamp the account into the token at sign-in, and re-read it whenever the session is read
+        // (page loads, the client's session polling), so admin changes reach people without a new sign-in
+        async jwt({ token, user, account, profile }) {
             let row: Account | undefined;
             if (account?.provider === 'github') {
                 row = await accountWhere('github_login', String((profile as { login?: string }).login).toLowerCase());
             } else if (account?.provider === 'credentials') {
                 row = await accountById(user.id);
-            } else if (trigger === 'update' && token.uid) {
+            } else if (token.uid) {
                 row = await accountById(token.uid);
             }
             if (account) token.method = account.provider === 'github' ? 'github' : 'password';
-            if (row) {
-                Object.assign(token, {
-                    uid: row.id, email: row.email, name: row.name, isAdmin: row.is_admin,
-                    // A temporary password only has to be replaced by someone who signed in with it
-                    mustChangePassword: row.must_change_password && token.method === 'password',
-                });
+            if (!row || row.disabled) {
+                // Deleted or disabled since sign-in: drop the account claims, which signs them out of gated pages
+                delete token.uid; delete token.isAdmin; delete token.canSeeLeaderboard; delete token.mustChangePassword;
+                return token;
             }
+            Object.assign(token, {
+                uid: row.id, email: row.email, name: row.name, isAdmin: row.is_admin, canSeeLeaderboard: row.can_see_leaderboard,
+                // A temporary password only has to be replaced by someone who signed in with it
+                mustChangePassword: row.must_change_password && token.method === 'password',
+            });
             return token;
         },
         async session({ session, token }) {
             session.user = {
                 ...session.user,
-                uid: token.uid, isAdmin: token.isAdmin, mustChangePassword: token.mustChangePassword,
+                uid: token.uid, isAdmin: token.isAdmin, canSeeLeaderboard: token.canSeeLeaderboard,
+                mustChangePassword: token.mustChangePassword,
             };
             return session;
         },

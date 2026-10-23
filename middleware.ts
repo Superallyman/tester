@@ -37,6 +37,10 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(to(request, "/account"));
   }
 
+  if (path.startsWith("/leaderboard") && token.canSeeLeaderboard === false) {
+    return NextResponse.redirect(to(request, "/"));
+  }
+
   if (isAdminPage && !token.isAdmin) {
     return NextResponse.redirect(to(request, "/"));
   }

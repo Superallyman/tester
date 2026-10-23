@@ -9,7 +9,7 @@ export const GET = handler(async () => {
     const [users, orphans] = await Promise.all([
         query(`
             select u.id, u.email, u.name, u.github_login, u.password_hash is not null as has_password,
-                   u.is_admin, u.disabled, u.must_change_password, u.created_at, u.last_login_at,
+                   u.is_admin, u.can_see_leaderboard, u.disabled, u.must_change_password, u.created_at, u.last_login_at,
                    (select count(*)::int from user_activity a where lower(trim(a.user_email)) = u.email) as attempts
             from app_users u
             order by u.last_login_at desc nulls last, u.created_at`),

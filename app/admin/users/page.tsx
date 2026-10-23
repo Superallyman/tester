@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import { api } from "@/utils/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,7 @@ interface User {
     github_login: string | null;
     has_password: boolean;
     is_admin: boolean;
+    can_see_leaderboard: boolean;
     disabled: boolean;
     must_change_password: boolean;
     last_login_at: string | null;
@@ -35,6 +37,7 @@ const card = "rounded-xl border border-black/10 dark:border-white/15 bg-black/[0
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 
 export default function AdminUsersPage() {
+    const { data: session } = useSession();
     const [users, setUsers] = useState<User[]>([]);
     const [orphans, setOrphans] = useState<Orphan[]>([]);
     const [error, setError] = useState<string | null>(null);
@@ -68,9 +71,9 @@ export default function AdminUsersPage() {
         });
     };
 
-    const act = (u: User, action: string) => {
+    const act = (u: User, action: string, value?: boolean) => {
         if (action === "reset-password" && !confirm(`Give ${u.email} a new temporary password? Their current password stops working.`)) return;
-        run(() => api(`/api/admin/users/${u.id}`, { method: "PATCH", body: { action } }));
+        run(() => api(`/api/admin/users/${u.id}`, { method: "PATCH", body: { action, value } }));
     };
 
     return (
@@ -118,7 +121,17 @@ export default function AdminUsersPage() {
                                 {" · "}{u.attempts} attempts{u.last_login_at && ` · last sign-in ${fmtDate(u.last_login_at)}`}
                             </p>
                         </div>
-                        <div className="flex shrink-0 gap-2">
+                        <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2">
+                            <label className="flex items-center gap-1.5 text-sm">
+                                <input type="checkbox" checked={u.is_admin} disabled={u.id === session?.user?.uid}
+                                    title={u.id === session?.user?.uid ? "You can't remove your own admin" : undefined}
+                                    onChange={e => act(u, "set-admin", e.target.checked)} />
+                                Admin
+                            </label>
+                            <label className="flex items-center gap-1.5 text-sm">
+                                <input type="checkbox" checked={u.can_see_leaderboard} onChange={e => act(u, "set-leaderboard", e.target.checked)} />
+                                Leaderboard
+                            </label>
                             <Button variant="outline" size="sm" onClick={() => act(u, "reset-password")}>
                                 {u.has_password ? "Reset password" : "Add password"}
                             </Button>

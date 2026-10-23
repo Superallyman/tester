@@ -1,10 +1,11 @@
-import { handler } from '@/server/auth';
+import { HttpError, handler } from '@/server/auth';
 import { query } from '@/server/db';
 
 const nameOf = (email: string) => email.split('@')[0];
 
 // Everyone's attempts, minimal columns: emails are reduced to their name part and no answers are sent
 export const GET = handler(async (_req, user) => {
+    if (!user.canSeeLeaderboard) throw new HttpError(403, "The leaderboard isn't turned on for your account.");
     const [rows, [{ total }]] = await Promise.all([
         query<{ question_id: string; is_correct: boolean; attempted_at: string; user_email: string | null; answered: boolean; category: string | null }>(`
             select a.question_id, a.is_correct, a.attempted_at, a.user_email,

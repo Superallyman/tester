@@ -53,7 +53,10 @@ export default function Navbar() {
 
   const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
 
-  const links = LINKS.map(link => (
+  const { data: session } = useSession();
+  const visibleLinks = LINKS.filter(link => link.href !== "/leaderboard" || session?.user?.canSeeLeaderboard !== false);
+
+  const links = visibleLinks.map(link => (
     <Link
       key={link.href}
       href={link.href}

@@ -5,6 +5,7 @@ import "next-auth/jwt";
 interface AccountClaims {
     uid?: string;
     isAdmin?: boolean;
+    canSeeLeaderboard?: boolean;
     mustChangePassword?: boolean;
     method?: 'github' | 'password';
 }

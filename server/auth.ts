@@ -9,6 +9,7 @@ export interface ApiUser {
     email: string;
     name: string;
     isAdmin: boolean;
+    canSeeLeaderboard: boolean;
 }
 
 export class HttpError extends Error {
@@ -23,7 +24,7 @@ export async function requireUser(req: NextRequest): Promise<ApiUser> {
     if (!token?.uid) throw new HttpError(401, 'Not signed in');
     const account = await accountById(token.uid);
     if (!account || account.disabled) throw new HttpError(403, 'Not allowed');
-    return { id: account.id, email: account.email, name: account.name, isAdmin: account.is_admin };
+    return { id: account.id, email: account.email, name: account.name, isAdmin: account.is_admin, canSeeLeaderboard: account.can_see_leaderboard };
 }
 
 /** Wraps a route handler so auth failures and bad input become JSON errors instead of 500 pages. */

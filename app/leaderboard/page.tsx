@@ -82,7 +82,7 @@ export default function LeaderboardPage() {
             })
             .catch(err => {
                 console.error(err);
-                if (!cancelled) setError('Could not load the leaderboard.');
+                if (!cancelled) setError(err.message.includes('leaderboard') ? err.message : 'Could not load the leaderboard.');
             });
         return () => { cancelled = true; };
     }, []);
