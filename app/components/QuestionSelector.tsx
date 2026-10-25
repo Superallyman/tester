@@ -31,6 +31,7 @@ export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorP
     const [searchingPhrase, setSearchingPhrase] = useState(false);
     const [limit, setLimit] = useState(1); //can we save the limit in local storage so it persists across sessions?
     const [unseenOnly, setUnseenOnly] = useState(false);
+    const [bookmarkedOnly, setBookmarkedOnly] = useState(false);
     const [loading, setLoading] = useState(false);
     const [satisfactionLevels, setSatisfactionLevels] = useState<number[]>([]);
     const [notMasteredOnly, setNotMasteredOnly] = useState(false);
@@ -138,6 +139,7 @@ export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorP
                     exclude: hasPhraseFilters ? [] : excludedCats,
                     unseenOnly,
                     excludeMastered: notMasteredOnly,
+                    bookmarkedOnly,
                     satisfaction: satisfactionLevels,
                 },
             });
@@ -232,6 +234,8 @@ export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorP
                 </div>                <div style={{ display: 'flex', alignItems: 'center', marginTop: '18px' }}>
                     <input type="checkbox" id="unseen" checked={unseenOnly} disabled={notMasteredOnly || satisfactionLevels.length > 0} onChange={(e) => setUnseenOnly(e.target.checked)} />
                     <label htmlFor="unseen" style={{ marginLeft: '8px', fontSize: '0.9rem', opacity: (unseenOnly) ? 1 : 0.6 }}>Unseen Only</label>
+                    <input type="checkbox" id="bookmarked" checked={bookmarkedOnly} onChange={(e) => setBookmarkedOnly(e.target.checked)} style={{ marginLeft: '16px' }} />
+                    <label htmlFor="bookmarked" style={{ marginLeft: '8px', fontSize: '0.9rem', opacity: bookmarkedOnly ? 1 : 0.6 }}>Bookmarked Only</label>
                 </div>
             </div>
 

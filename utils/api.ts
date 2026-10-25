@@ -1,7 +1,9 @@
 // Browser-side helper for the app's own /api routes
 
-export async function api<T>(path: string, init?: { method?: string; body?: unknown }): Promise<T> {
+// keepalive lets a small request finish while the page is closing
+export async function api<T>(path: string, init?: { method?: string; body?: unknown; keepalive?: boolean }): Promise<T> {
     const res = await fetch(path, {
+        keepalive: init?.keepalive,
         method: init?.method || (init?.body !== undefined ? 'POST' : 'GET'),
         headers: init?.body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
         body: init?.body !== undefined ? JSON.stringify(init.body) : undefined,

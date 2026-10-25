@@ -69,9 +69,10 @@ export default function SmartReview({ onQuestionsFound }: SmartReviewProps) {
 
         (async () => {
             const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-            const [rows, review] = await Promise.all([
+            const [rows, review, saved] = await Promise.all([
                 api<ActivityRow[]>('/api/activity').catch(() => [] as ActivityRow[]),
                 api<{ dueIds: string[]; upcoming: { day: string; n: number }[] }>(`/api/review${qs({ tz })}`).catch(() => null),
+                api<{ bookmarks: string[] }>('/api/notes').catch(() => ({ bookmarks: [] as string[] })),
             ]);
             if (cancelled) return;
             if (rows.length === 0) { setPresets([]); return; }
@@ -115,6 +116,7 @@ export default function SmartReview({ onQuestionsFound }: SmartReviewProps) {
                 { key: 'wrong', title: 'Still wrong', blurb: 'Your most recent attempt was incorrect', ids: stillWrong, color: '#ef4444' },
                 { key: 'never', title: 'Never gotten right', blurb: 'Seen, but not answered correctly yet', ids: neverRight, color: '#f59e0b' },
                 { key: 'fading', title: 'Fading', blurb: `Correct last time, but over ${FADE_DAYS} days ago`, ids: fading, color: '#3b82f6' },
+                { key: 'bookmarked', title: 'Bookmarked', blurb: 'Questions you starred to come back to', ids: saved.bookmarks, color: '#db2777' },
             ]);
         })();
 

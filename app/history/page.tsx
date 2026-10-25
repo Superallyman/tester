@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { api, qs } from '@/utils/api';
 import { useSession } from "next-auth/react";
 
@@ -8,6 +8,8 @@ import { smartClean } from '@/utils/formatters';
 import { FrostedSelect } from '../components/FrostedSelect';
 import ReportQuestion from '../components/ReportQuestion';
 import ReviewedOption from '../components/ReviewedOption';
+import QuestionNotes from '../components/QuestionNotes';
+import { useNotes } from '../components/useNotes';
 import { Trash2 } from 'lucide-react';
 
 interface HistoryItem {
@@ -39,6 +41,8 @@ export default function HistoryPage() {
 
     // Data State
     const [history, setHistory] = useState<HistoryItem[]>([]);
+    const historyQuestionIds = useMemo(() => [...new Set(history.map(h => h.question_id))], [history]);
+    const { notes, save: saveNote } = useNotes(historyQuestionIds);
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(0);
     const [hasMore, setHasMore] = useState(true);
@@ -362,6 +366,7 @@ export default function HistoryPage() {
                             <strong style={{ color: '#3b82f6', display: 'block', marginBottom: '8px', fontSize: '0.75rem', letterSpacing: '0.05em' }}>EXPLANATION:</strong>
                             {decodeHTML(item.questions.explanation)}
                         </div>
+                        <div style={{ marginTop: '12px' }}><QuestionNotes value={notes[item.question_id]} onSave={patch => saveNote(item.question_id, patch)} /></div>
                         <div style={{ marginTop: '10px' }}><ReportQuestion questionId={item.question_id} /></div>
                     </div>
                 ))}

@@ -6,6 +6,8 @@ import { api } from '@/utils/api';
 import { smartClean } from '@/utils/formatters';
 import ReportQuestion from './ReportQuestion';
 import ReviewedOption from './ReviewedOption';
+import QuestionNotes from './QuestionNotes';
+import { useNotes } from './useNotes';
 import { Timer } from 'lucide-react';
 
 interface Question {
@@ -56,6 +58,7 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
     const [mode, setMode] = useState<QuizMode>('all');
     const [showHelp, setShowHelp] = useState(false);
     const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
+    const { notes, save: saveNote } = useNotes(questionIds);
 
     useEffect(() => {
         try { if (localStorage.getItem(MODE_KEY) === 'one') setMode('one'); } catch { /* storage unavailable */ }
@@ -400,6 +403,10 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
                             current={hasSubmitted ? satisfaction[q.id] : ratings[q.id]}
                             onSelect={(val: number | undefined) => rate(q.id, val)}
                         />
+
+                        <div style={{ marginTop: '14px' }}>
+                            <QuestionNotes value={notes[q.id]} onSave={patch => saveNote(q.id, patch)} showNote={hasSubmitted} />
+                        </div>
 
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginTop: '12px' }}>
                             <ReportQuestion key={q.id} questionId={q.id} />

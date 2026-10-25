@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 
 import { ExamQuestion, ExamSummary, LETTERS, PENDING_QUIZ_KEY, formatClock, isCorrect } from './examUtils';
 import ReportQuestion from '../components/ReportQuestion';
+import QuestionNotes from '../components/QuestionNotes';
+import { useNotes } from '../components/useNotes';
 
 interface ExamResultsProps {
     summary: ExamSummary;
@@ -38,6 +40,8 @@ export default function ExamResults({ summary, questions, onNewExam }: ExamResul
     const [filter, setFilter] = useState<ItemFilter>(summary.incorrectIds.length ? 'incorrect' : 'all');
     const [category, setCategory] = useState<string | null>(null);
     const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+    const questionIds = useMemo(() => questions.map(q => q.id), [questions]);
+    const { notes, save: saveNote } = useNotes(questionIds);
 
     const pct = summary.total ? (summary.correct / summary.total) * 100 : 0;
     const answeredPct = summary.answered ? (summary.correct / summary.answered) * 100 : 0;
@@ -255,6 +259,7 @@ export default function ExamResults({ summary, questions, onNewExam }: ExamResul
                                             <strong style={{ color: '#d97706' }}>Your critique:</strong> {summary.critiques[q.id]}
                                         </div>
                                     )}
+                                    <div style={{ marginTop: 12 }}><QuestionNotes value={notes[q.id]} onSave={patch => saveNote(q.id, patch)} /></div>
                                     <div style={{ marginTop: 10 }}><ReportQuestion questionId={q.id} /></div>
                                 </div>
                             )}

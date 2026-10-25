@@ -10,6 +10,7 @@ const MAX_PICK = 500;
 //   unseenOnly          never attempted
 //   excludeMastered     attempted, never answered correctly
 //   satisfaction        latest satisfaction rating is one of these (1-4)
+//   bookmarkedOnly      only questions the user bookmarked
 export const POST = handler(async (req, user) => {
     const body = await req.json();
     const limit = Number(body.limit);
@@ -25,6 +26,10 @@ export const POST = handler(async (req, user) => {
     if (include.length) { args.push(include); where.push(`q.category = any($${args.length})`); }
     else if (exclude.length) { args.push(exclude); where.push(`not (q.category = any($${args.length}))`); }
     if (ids) { args.push(ids); where.push(`q.id = any($${args.length}::uuid[])`); }
+    if (body.bookmarkedOnly === true) {
+        args.push(user.id);
+        where.push(`exists (select 1 from question_notes n where n.user_id = $${args.length} and n.question_id = q.id and n.bookmarked)`);
+    }
     if (body.unseenOnly === true) {
         where.push('s.question_id is null');
     } else if (body.excludeMastered === true || levels.length) {
