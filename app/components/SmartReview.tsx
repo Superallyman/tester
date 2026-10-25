@@ -4,7 +4,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useSession } from "next-auth/react";
-import { api } from '@/utils/api';
+import { api, qs } from '@/utils/api';
 
 interface SmartReviewProps {
     onQuestionsFound: (ids: string[]) => void;
@@ -23,6 +23,7 @@ interface Preset {
     blurb: string;
     ids: string[];
     color: string;
+    ordered?: boolean; // keep the server's order (most overdue first) instead of shuffling
 }
 
 const DEFAULT_SET_SIZE = 20;
@@ -67,7 +68,11 @@ export default function SmartReview({ onQuestionsFound }: SmartReviewProps) {
         let cancelled = false;
 
         (async () => {
-            const rows = await api<ActivityRow[]>('/api/activity').catch(() => [] as ActivityRow[]);
+            const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            const [rows, review] = await Promise.all([
+                api<ActivityRow[]>('/api/activity').catch(() => [] as ActivityRow[]),
+                api<{ dueIds: string[]; upcoming: { day: string; n: number }[] }>(`/api/review${qs({ tz })}`).catch(() => null),
+            ]);
             if (cancelled) return;
             if (rows.length === 0) { setPresets([]); return; }
 
@@ -100,7 +105,13 @@ export default function SmartReview({ onQuestionsFound }: SmartReviewProps) {
 
             if (cancelled) return;
             setWeakest(weak);
+            const soon = review?.upcoming.reduce((sum, d) => sum + d.n, 0) ?? 0;
             setPresets([
+                {
+                    key: 'due', title: 'Due for review', ids: review?.dueIds ?? [], color: '#10b981', ordered: true,
+                    blurb: review?.dueIds.length ? 'Spaced repetition: scheduled for today, most overdue first'
+                        : soon ? `All caught up · ${soon} due in the next 7 days` : 'All caught up',
+                },
                 { key: 'wrong', title: 'Still wrong', blurb: 'Your most recent attempt was incorrect', ids: stillWrong, color: '#ef4444' },
                 { key: 'never', title: 'Never gotten right', blurb: 'Seen, but not answered correctly yet', ids: neverRight, color: '#f59e0b' },
                 { key: 'fading', title: 'Fading', blurb: `Correct last time, but over ${FADE_DAYS} days ago`, ids: fading, color: '#3b82f6' },
@@ -164,7 +175,7 @@ export default function SmartReview({ onQuestionsFound }: SmartReviewProps) {
                     <button
                         key={p.key}
                         disabled={p.ids.length === 0}
-                        onClick={() => onQuestionsFound(shuffle(p.ids).slice(0, setSize))}
+                        onClick={() => onQuestionsFound((p.ordered ? p.ids : shuffle(p.ids)).slice(0, setSize))}
                         style={cardStyle(p.color, p.ids.length === 0)}
                     >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 6 }}>

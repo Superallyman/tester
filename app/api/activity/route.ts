@@ -1,5 +1,6 @@
 import { HttpError, handler, isUuid, ratingOrNull } from '@/server/auth';
 import { query } from '@/server/db';
+import { recordAnswers } from '@/server/schedule';
 
 export interface ActivityInput {
     question_id: string;
@@ -30,11 +31,11 @@ export const POST = handler(async (req, user) => {
     });
 
     // One multi-row insert: unnest the column arrays (submitted_answer goes in as JSON since text[][] can't be ragged)
-    return query<{ id: string; question_id: string }>(`
+    const inserted = await query<{ id: string; question_id: string; is_correct: boolean; user_rating: number | null; attempted_at: Date; answered: boolean }>(`
         insert into user_activity (question_id, is_correct, user_rating, satisfaction_rating, submitted_answer, user_email)
         select qid, ok, ur, sr, array(select jsonb_array_elements_text(sa)), $6
         from unnest($1::uuid[], $2::boolean[], $3::int[], $4::int[], $5::jsonb[]) as t(qid, ok, ur, sr, sa)
-        returning id, question_id`,
+        returning id, question_id, is_correct, user_rating, attempted_at, cardinality(submitted_answer) > 0 as answered`,
         [
             clean.map(c => c[0]),
             clean.map(c => c[1]),
@@ -43,4 +44,7 @@ export const POST = handler(async (req, user) => {
             clean.map(c => JSON.stringify(c[4])),
             user.email,
         ]);
+    // Skips (no answer picked) don't move the review schedule
+    await recordAnswers(user, inserted.filter(r => r.answered));
+    return inserted.map(({ id, question_id }) => ({ id, question_id }));
 });
