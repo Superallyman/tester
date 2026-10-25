@@ -13,7 +13,8 @@ export interface ActivityInput {
 // GET → every attempt by the signed-in user, oldest first, with the question's category
 export const GET = handler((_req, user) =>
     query(`
-        select a.id, a.question_id, a.is_correct, a.user_rating, a.satisfaction_rating, a.attempted_at, q.category
+        select a.id, a.question_id, a.is_correct, a.user_rating, a.satisfaction_rating, a.attempted_at, q.category,
+               coalesce(cardinality(a.submitted_answer), 0) > 0 as answered
         from user_activity a
         left join questions q on q.id = a.question_id
         where a.user_email = $1

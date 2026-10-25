@@ -5,6 +5,7 @@ import { api } from '@/utils/api';
 import { useSession } from "next-auth/react";
 import StudyHeatmap from '../components/StudyHeatmap';
 import { useProgress } from '../components/useProgress';
+import Insights from './Insights';
 
 // --- Types & Interfaces ---
 type SortType = 'alpha' | 'worst' | 'best' | 'urgency' | 'mastery' | 'frustration';
@@ -23,18 +24,12 @@ interface CategoryStat {
   lastAttempted: string;
 }
 
-interface ChartPoint {
-  date: string;
-  acc: number;
-}
-
 interface AnalyticsStats {
   total: number;
   totalCorrect: number;
   overallAccuracy: number;
   streak: number;
   categories: CategoryStat[];
-  chartPoints: ChartPoint[];
 }
 
 interface UserActivityEntry {
@@ -44,6 +39,7 @@ interface UserActivityEntry {
   attempted_at: string;
   question_id: string;
   category: string | null;
+  answered: boolean; // false for skips
 }
 
 interface CategoryMapEntry {
@@ -91,7 +87,6 @@ export default function AnalyticsPage() {
   const processAnalytics = (data: UserActivityEntry[], totalPerCat: Record<string, number>) => {
     const categoryMap: Record<string, CategoryMapEntry> = {};
     const daysSet = new Set<string>();
-    const trendData: Record<string, { total: number; correct: number; timestamp: number }> = {};
 
     let totalCorrect = 0;
 
@@ -103,7 +98,6 @@ export default function AnalyticsPage() {
 
       const dateObj = new Date(entry.attempted_at);
       const timestamp = dateObj.getTime();
-      const dateKey = dateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
       daysSet.add(dateObj.toDateString());
 
       if (!categoryMap[cat]) {
@@ -135,9 +129,6 @@ export default function AnalyticsPage() {
         categoryMap[cat].masteredIds.add(entry.question_id);
       }
 
-      if (!trendData[dateKey]) trendData[dateKey] = { total: 0, correct: 0, timestamp };
-      trendData[dateKey].total++;
-      if (entry.is_correct) trendData[dateKey].correct++;
     });
 
     let streak = 0;
@@ -164,16 +155,10 @@ export default function AnalyticsPage() {
       };
     });
 
-    const chartPoints = Object.entries(trendData)
-      .sort((a, b) => b[1].timestamp - a[1].timestamp)
-      .slice(0, 7)
-      .reverse()
-      .map(([date, d]) => ({ date, acc: (d.correct / d.total) * 100 }));
-
     const total = data.length;
     const overallAccuracy = total > 0 ? (totalCorrect / total) * 100 : 0;
 
-    setStats({ total, totalCorrect, overallAccuracy, streak, categories, chartPoints });
+    setStats({ total, totalCorrect, overallAccuracy, streak, categories });
   };
 
   useEffect(() => {
@@ -190,7 +175,8 @@ export default function AnalyticsPage() {
 
       try {
         // Newest first, as the analytics code expects
-        const activity = (await api<UserActivityEntry[]>('/api/activity')).reverse();
+        // Skips (no answer picked) aren't attempts
+        const activity = (await api<UserActivityEntry[]>('/api/activity')).filter(a => a.answered).reverse();
         processAnalytics(activity, totalPerCat);
       } catch (activityErr) {
         console.error(activityErr);
@@ -234,7 +220,7 @@ export default function AnalyticsPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <h1>Performance & Insights</h1>
         <div style={{ padding: '8px 16px', borderRadius: '20px', border: '2px solid #f59e0b', color: '#f59e0b', fontWeight: 'bold' }}>
-          🔥 {stats.streak} Day Streak
+          {progress?.streak ?? stats.streak}-day streak
         </div>
       </div>
 
@@ -243,6 +229,8 @@ export default function AnalyticsPage() {
           <StudyHeatmap days={progress.days} today={progress.today} />
         </section>
       )}
+
+      <Insights />
 
       {/* --- Overall Stats Summary Component --- */}
       <section style={{ marginBottom: '2.5rem' }}>
@@ -290,18 +278,6 @@ export default function AnalyticsPage() {
         </div>
       </section>
 
-      <section style={{ marginBottom: '3rem' }}>
-        <h3 style={{ marginBottom: '1.5rem' }}>7-Day Accuracy Trend</h3>
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '15px', height: '180px', padding: '10px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', borderBottom: '2px solid #444' }}>
-          {stats.chartPoints.map((p) => (
-            <div key={p.date} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', height: '100%' }}>
-              <span style={{ fontSize: '0.7rem', opacity: 0.8 }}>{p.acc.toFixed(0)}%</span>
-              <div style={{ width: '100%', maxWidth: '40px', height: `${Math.max(p.acc, 4)}%`, background: p.acc > 0 ? '#0070f3' : '#444', borderRadius: '6px 6px 0 0', boxShadow: p.acc > 0 ? '0 0 15px rgba(0, 112, 243, 0.3)' : 'none' }} />
-              <span style={{ fontSize: '0.7rem', opacity: 0.6, whiteSpace: 'nowrap', marginTop: 'auto' }}>{p.date}</span>
-            </div>
-          ))}
-        </div>
-      </section>
 
       <div style={{ marginBottom: '2rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '10px', flexWrap: 'wrap', gap: '10px' }}>
