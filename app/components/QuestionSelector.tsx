@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { api, qs } from '@/utils/api';
+import { MIN_PEOPLE } from '@/utils/difficulty';
 
 interface QuestionSelectorProps {
     onQuestionsFound: (ids: string[]) => void;
@@ -32,6 +33,7 @@ export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorP
     const [limit, setLimit] = useState(1); //can we save the limit in local storage so it persists across sessions?
     const [unseenOnly, setUnseenOnly] = useState(false);
     const [bookmarkedOnly, setBookmarkedOnly] = useState(false);
+    const [difficulty, setDifficulty] = useState<'' | 'easy' | 'medium' | 'hard'>('');
     const [loading, setLoading] = useState(false);
     const [satisfactionLevels, setSatisfactionLevels] = useState<number[]>([]);
     const [notMasteredOnly, setNotMasteredOnly] = useState(false);
@@ -140,6 +142,7 @@ export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorP
                     unseenOnly,
                     excludeMastered: notMasteredOnly,
                     bookmarkedOnly,
+                    difficulty: difficulty || undefined,
                     satisfaction: satisfactionLevels,
                 },
             });
@@ -231,11 +234,19 @@ export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorP
                         onChange={(e) => handleLimitChange(parseInt(e.target.value) || 1)}
                         style={{ padding: '10px', background: 'rgba(128,128,128,0.1)', border: '1px solid rgba(128,128,128,0.2)', color: 'inherit', borderRadius: '8px' }}
                     />
-                </div>                <div style={{ display: 'flex', alignItems: 'center', marginTop: '18px' }}>
+                </div>                <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', rowGap: '8px', marginTop: '18px' }}>
                     <input type="checkbox" id="unseen" checked={unseenOnly} disabled={notMasteredOnly || satisfactionLevels.length > 0} onChange={(e) => setUnseenOnly(e.target.checked)} />
                     <label htmlFor="unseen" style={{ marginLeft: '8px', fontSize: '0.9rem', opacity: (unseenOnly) ? 1 : 0.6 }}>Unseen Only</label>
                     <input type="checkbox" id="bookmarked" checked={bookmarkedOnly} onChange={(e) => setBookmarkedOnly(e.target.checked)} style={{ marginLeft: '16px' }} />
                     <label htmlFor="bookmarked" style={{ marginLeft: '8px', fontSize: '0.9rem', opacity: bookmarkedOnly ? 1 : 0.6 }}>Bookmarked Only</label>
+                    <select value={difficulty} onChange={e => setDifficulty(e.target.value as typeof difficulty)} aria-label="Difficulty"
+                        title={`From everyone's first tries; a question is rated once ${MIN_PEOPLE} people have answered it`}
+                        style={{ marginLeft: '16px', padding: '6px 8px', borderRadius: '6px', border: '1px solid rgba(128,128,128,0.3)', background: 'transparent', color: 'inherit', fontSize: '0.85rem' }}>
+                        <option value="">Any difficulty</option>
+                        <option value="easy">Easy (70%+ right)</option>
+                        <option value="medium">Medium</option>
+                        <option value="hard">Hard (under 40% right)</option>
+                    </select>
                 </div>
             </div>
 

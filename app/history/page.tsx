@@ -10,6 +10,8 @@ import ReportQuestion from '../components/ReportQuestion';
 import ReviewedOption from '../components/ReviewedOption';
 import QuestionNotes from '../components/QuestionNotes';
 import { useNotes } from '../components/useNotes';
+import DifficultyLine from '../components/DifficultyLine';
+import { useDifficulty } from '../components/useDifficulty';
 import { Trash2 } from 'lucide-react';
 
 interface HistoryItem {
@@ -43,6 +45,7 @@ export default function HistoryPage() {
     const [history, setHistory] = useState<HistoryItem[]>([]);
     const historyQuestionIds = useMemo(() => [...new Set(history.map(h => h.question_id))], [history]);
     const { notes, save: saveNote } = useNotes(historyQuestionIds);
+    const difficulty = useDifficulty(historyQuestionIds);
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(0);
     const [hasMore, setHasMore] = useState(true);
@@ -342,7 +345,8 @@ export default function HistoryPage() {
                             </div>
                         </div>
 
-                        <h3 style={{ fontSize: '1.1rem', marginBottom: '1.2rem', lineHeight: '1.5', fontWeight: '500' }}>{decodeHTML(item.questions.question_text)}</h3>
+                        <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem', lineHeight: '1.5', fontWeight: '500' }}>{decodeHTML(item.questions.question_text)}</h3>
+                        <div style={{ marginBottom: '1rem' }}><DifficultyLine stat={difficulty[item.question_id]} /></div>
 
                         <div style={{ display: 'grid', gap: '8px', marginBottom: '15px' }}>
                             {item.questions.options.map((opt, idx) => {

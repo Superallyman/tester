@@ -1,5 +1,6 @@
 import { HttpError, handler, isUuid } from '@/server/auth';
 import { query } from '@/server/db';
+import { Difficulty, difficultySql } from '@/utils/difficulty';
 
 const MAX_PICK = 500;
 
@@ -11,6 +12,7 @@ const MAX_PICK = 500;
 //   excludeMastered     attempted, never answered correctly
 //   satisfaction        latest satisfaction rating is one of these (1-4)
 //   bookmarkedOnly      only questions the user bookmarked
+//   difficulty          "easy" | "medium" | "hard", from everyone's first tries (rated questions only)
 export const POST = handler(async (req, user) => {
     const body = await req.json();
     const limit = Number(body.limit);
@@ -26,6 +28,10 @@ export const POST = handler(async (req, user) => {
     if (include.length) { args.push(include); where.push(`q.category = any($${args.length})`); }
     else if (exclude.length) { args.push(exclude); where.push(`not (q.category = any($${args.length}))`); }
     if (ids) { args.push(ids); where.push(`q.id = any($${args.length}::uuid[])`); }
+    if (body.difficulty !== undefined && body.difficulty !== null) {
+        if (!(body.difficulty in difficultySql)) throw new HttpError(400, 'Bad difficulty');
+        where.push(difficultySql[body.difficulty as Difficulty]);
+    }
     if (body.bookmarkedOnly === true) {
         args.push(user.id);
         where.push(`exists (select 1 from question_notes n where n.user_id = $${args.length} and n.question_id = q.id and n.bookmarked)`);
@@ -47,6 +53,7 @@ export const POST = handler(async (req, user) => {
             from user_activity where user_email = $1 group by question_id
         )
         select q.id from questions q left join s on s.question_id = q.id
+        left join question_difficulty d on d.question_id = q.id
         ${where.length ? `where ${where.join(' and ')}` : ''}
         order by random() limit $${args.length}`, args);
     return rows.map(r => r.id);

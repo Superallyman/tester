@@ -8,6 +8,8 @@ import ReportQuestion from './ReportQuestion';
 import ReviewedOption from './ReviewedOption';
 import QuestionNotes from './QuestionNotes';
 import { useNotes } from './useNotes';
+import DifficultyLine from './DifficultyLine';
+import { useDifficulty } from './useDifficulty';
 import { Timer } from 'lucide-react';
 
 interface Question {
@@ -59,6 +61,8 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
     const [showHelp, setShowHelp] = useState(false);
     const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
     const { notes, save: saveNote } = useNotes(questionIds);
+    // Only after submitting: knowing a question is "hard" beforehand would be a hint
+    const difficulty = useDifficulty(questionIds, hasSubmitted);
 
     useEffect(() => {
         try { if (localStorage.getItem(MODE_KEY) === 'one') setMode('one'); } catch { /* storage unavailable */ }
@@ -334,8 +338,11 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
                             boxShadow: isActive && mode === 'all' ? '0 0 0 1px #0070f3' : 'none', scrollMarginTop: '12px',
                         }}>
                         {hasSubmitted && (
-                            <div style={{ marginBottom: '0.75rem', fontSize: '0.85rem', fontWeight: 'bold', letterSpacing: '0.04em', color: isCorrect ? '#10b981' : '#ef4444' }}>
-                                {isCorrect ? 'CORRECT' : 'INCORRECT'}
+                            <div style={{ marginBottom: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px 12px' }}>
+                                <span style={{ fontSize: '0.85rem', fontWeight: 'bold', letterSpacing: '0.04em', color: isCorrect ? '#10b981' : '#ef4444' }}>
+                                    {isCorrect ? 'CORRECT' : 'INCORRECT'}
+                                </span>
+                                <DifficultyLine stat={difficulty[q.id]} />
                             </div>
                         )}
 
