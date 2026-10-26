@@ -194,14 +194,15 @@ export default function SmartReview({ onQuestionsFound }: SmartReviewProps) {
                     </button>
                 )}
             </div>
-            <p className="orbit-muted" style={{ marginTop: 8, height: FOOTER_HEIGHT, lineHeight: `${FOOTER_HEIGHT}px` }}>Each set draws up to {setSize} random questions.</p>
+            <p className="orbit-muted" style={{ marginTop: 8 }}>Each set draws up to {setSize} random questions.</p>
         </section>
     );
 }
 
 // Fixed, so the skeleton and the loaded cards are exactly the same size: titles keep to one line, blurbs to two
-const CARD_HEIGHT = 96;
-const FOOTER_HEIGHT = 18;
+// In rem so it follows the text size: room for a one-line title and a two-line blurb
+const CARD_HEIGHT = '6.5rem';
+const Ghost = ({ children }: { children: React.ReactNode }) => <span className="orbit-skeleton orbit-skeleton--ghost">{children}</span>;
 const TITLE: React.CSSProperties = { fontSize: '0.92rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 };
 const BLURB: React.CSSProperties = { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' };
 const GRID: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 8 };
@@ -215,22 +216,29 @@ function SmartReviewHeader({ children }: { children?: React.ReactNode }) {
     );
 }
 
-// Six cards: due, still wrong, never right, fading, bookmarked, weakest category (the most there can be)
+// Six cards: due, still wrong, never right, fading, bookmarked, weakest category (the most there can be).
+// Same markup as the loaded section with ghosted text, so it is the same size at any font size.
 function SmartReviewSkeleton() {
     return (
         <section aria-hidden="true" style={{ marginBottom: '1.5rem' }}>
-            {/* As wide as the real "Questions per set" control, so the header wraps at the same screen widths */}
-            <SmartReviewHeader><span className="orbit-skeleton" style={{ width: 212, height: 32 }} /></SmartReviewHeader>
+            <SmartReviewHeader>
+                <span className="orbit-row" style={{ gap: 8 }}>
+                    <span className="orbit-label"><Ghost>Questions per set</Ghost></span>
+                    <span className="orbit-input" style={{ width: 72, padding: '5px 8px', fontSize: '0.85rem', color: 'transparent' }}>20</span>
+                </span>
+            </SmartReviewHeader>
             <div style={GRID}>
                 {Array.from({ length: 6 }, (_, i) => (
-                    <div key={i} className="orbit-card" style={{ height: CARD_HEIGHT, boxSizing: 'border-box', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                        <span className="orbit-skeleton" style={{ width: '70%', height: 14 }} />
-                        <span className="orbit-skeleton orbit-skeleton--text" style={{ width: '90%' }} />
-                        <span className="orbit-skeleton orbit-skeleton--text" style={{ width: '55%' }} />
+                    <div key={i} className="orbit-option" style={{ height: CARD_HEIGHT, boxSizing: 'border-box', flexDirection: 'column', alignItems: 'stretch', justifyContent: 'flex-start', gap: 4, overflow: 'hidden', cursor: 'default' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 6 }}>
+                            <span style={TITLE}><Ghost>Still wrong</Ghost></span>
+                            <span style={{ fontSize: '1.3rem', fontWeight: 300 }}><Ghost>00</Ghost></span>
+                        </div>
+                        <div className="orbit-muted" style={BLURB}><Ghost>Your most recent attempt</Ghost></div>
                     </div>
                 ))}
             </div>
-            <div style={{ marginTop: 8, height: FOOTER_HEIGHT, display: 'flex', alignItems: 'center' }}><span className="orbit-skeleton orbit-skeleton--text" style={{ width: 220 }} /></div>
+            <p className="orbit-muted" style={{ marginTop: 8 }}><Ghost>Each set draws up to 20 random questions.</Ghost></p>
         </section>
     );
 }

@@ -5,6 +5,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { api, qs } from '@/utils/api';
+import { useElementWidth } from '../components/useElementWidth';
 import { glassCard } from '@/utils/orbitStyles';
 
 interface Area {
@@ -92,7 +93,7 @@ function AreaBars({ areas, min }: { areas: Area[]; min: number }) {
                                 </div>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <svg viewBox="0 0 100 10" preserveAspectRatio="none" style={{ flex: 1, height: 10 }} role="img"
+                                <svg viewBox="0 0 100 10" preserveAspectRatio="none" style={{ flex: 1, height: 12 }} role="img"
                                     aria-label={acc === null ? `${a.label}: no answers yet` : `${a.label}: ${acc.toFixed(0)}% of ${a.answered} answers`}>
                                     <rect x="0" y="0" width="100" height="10" rx="2" className="fill-black/[0.07] dark:fill-white/[0.08]" />
                                     {acc !== null && <rect x="0" y="0" width={Math.max(1.5, acc)} height="10" rx="2"
@@ -128,9 +129,12 @@ function WeeklyTrend({ weeks }: { weeks: Week[] }) {
         const last = monday.toISOString().slice(0, 10);
         return Array.from({ length: 26 }, (_, i) => addDays(last, (i - 25) * 7)).map(k => byWeek.get(k) ?? { week: k, answered: 0, correct: 0 });
     }, [weeks]);
+    // Drawn at the real width so labels are a true 12px on any screen
+    const [wrapRef, measured] = useElementWidth<HTMLDivElement>();
     if (!weeks.length) return null;
 
-    const W = 600, H = 150, L = 34, R = 8, T = 10, B = 18, VH = 54;
+    const FONT = 12;
+    const W = Math.max(280, measured || 600), H = 200, L = 40, R = 10, T = 12, B = 24, VH = 70;
     const x = (i: number) => L + (i / (series.length - 1)) * (W - L - R);
     const y = (p: number) => T + (1 - p / 100) * (H - T - B);
     const maxN = Math.max(...series.map(s => s.answered), 1);
@@ -155,15 +159,16 @@ function WeeklyTrend({ weeks }: { weeks: Week[] }) {
         <section style={card} aria-labelledby="trend-title">
             <h3 id="trend-title" className="orbit-h2" style={{ margin: '0 0 0.25rem' }}>Weekly accuracy</h3>
             <p style={{ ...muted, margin: '0 0 0.75rem' }}>Last 26 weeks. Hover or tap a week for its numbers.</p>
+            <div ref={wrapRef}>
             <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', display: 'block' }} role="img"
                 aria-label={`Weekly accuracy over 26 weeks; latest week with answers: ${(() => { const l = [...points].reverse().find(p => p.p !== null); return l ? `${l.p!.toFixed(0)}% of ${l.s.answered}` : 'none'; })()}`}>
                 {[0, 50, 70, 100].map(g => (
                     <g key={g}>
                         <line x1={L} x2={W - R} y1={y(g)} y2={y(g)} stroke="currentColor" strokeOpacity={g === TARGET ? 0.5 : 0.1} strokeDasharray={g === TARGET ? '4 4' : undefined} />
-                        <text x={L - 6} y={y(g) + 3} textAnchor="end" fontSize="10" fill="currentColor" opacity={0.6}>{g}%</text>
+                        <text x={L - 6} y={y(g) + 4} textAnchor="end" fontSize={FONT} fill="currentColor" opacity={0.6}>{g}%</text>
                     </g>
                 ))}
-                {[0, 8, 17, 25].map(i => <text key={i} x={x(i)} y={H - 4} textAnchor={i === 0 ? 'start' : i === 25 ? 'end' : 'middle'} fontSize="10" fill="currentColor" opacity={0.6}>{fmtWeek(series[i].week)}</text>)}
+                {(W < 420 ? [0, 12, 25] : [0, 8, 17, 25]).map(i => <text key={i} x={x(i)} y={H - 6} textAnchor={i === 0 ? 'start' : i === 25 ? 'end' : 'middle'} fontSize={FONT} fill="currentColor" opacity={0.6}>{fmtWeek(series[i].week)}</text>)}
                 {f && <line x1={x(f.i)} x2={x(f.i)} y1={T} y2={H - B} stroke="currentColor" strokeOpacity={0.35} />}
                 {segments.map((pts, k) => <polyline key={k} points={pts} fill="none" strokeWidth={2} strokeLinejoin="round" className="stroke-[#2a78d6] dark:stroke-[#3987e5]" />)}
                 {points.filter(p => p.p !== null).map(({ i, p }) => (
@@ -173,8 +178,8 @@ function WeeklyTrend({ weeks }: { weeks: Week[] }) {
                 {overlay(H)}
             </svg>
             <svg viewBox={`0 0 ${W} ${VH}`} style={{ width: '100%', height: 'auto', display: 'block', marginTop: 4 }} role="img" aria-label="Answers per week">
-                <text x={L - 6} y={12} textAnchor="end" fontSize="10" fill="currentColor" opacity={0.6}>{maxN}</text>
-                <text x={L - 6} y={VH - 2} textAnchor="end" fontSize="10" fill="currentColor" opacity={0.6}>0</text>
+                <text x={L - 6} y={14} textAnchor="end" fontSize={FONT} fill="currentColor" opacity={0.6}>{maxN}</text>
+                <text x={L - 6} y={VH - 2} textAnchor="end" fontSize={FONT} fill="currentColor" opacity={0.6}>0</text>
                 {series.map((s, i) => {
                     const h = (s.answered / maxN) * (VH - 6);
                     // Clamped so the first bar doesn't sit on the axis labels
@@ -184,6 +189,7 @@ function WeeklyTrend({ weeks }: { weeks: Week[] }) {
                 })}
                 {overlay(VH)}
             </svg>
+            </div>
             <div aria-live="polite" style={{ ...muted, marginTop: 6, minHeight: '1.2em' }}>
                 {f ? `Week of ${fmtWeek(f.s.week)}: ${f.s.answered ? `${f.p!.toFixed(0)}% right of ${f.s.answered} answers` : 'no practice'}` : 'Bars: answers per week'}
             </div>

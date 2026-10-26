@@ -1,5 +1,6 @@
 // Quick Test page: the Today card and Smart Review show same-size skeletons while loading, so the test
-// customizer below them doesn't jump when the data arrives. Checked at desktop and phone widths.
+// customizer below them doesn't jump when the data arrives (desktop and phone widths). And the logo +
+// wordmark, visible on phones too, always lands on a fresh Quick Test.
 import { encode } from 'next-auth/jwt';
 import { chromium } from 'playwright';
 const { query, pool } = await import('../../server/db.ts');
@@ -38,6 +39,24 @@ try {
         const after = (await heading.boundingBox())!.y;
         check(`${label}: skeletons shown while loading`, skeletons > 5, String(skeletons));
         check(`${label}: customizer stays put when data arrives`, Math.abs(after - before) <= 2, `${before.toFixed(0)} → ${after.toFixed(0)}`);
+        await page.unroute(/\/api\//);
+
+        const logo = page.getByRole('link', { name: /start a new Quick Test/ });
+        check(`${label}: logo and wordmark visible`, await logo.isVisible() && (await logo.innerText()).trim().toUpperCase() === 'TESTER');
+        if (label === 'phone') {
+            // Mid-quiz on / : the logo brings back a fresh customizer
+            await page.waitForTimeout(800);
+            await page.getByText('Generate Quiz').click();
+            await page.waitForSelector('h3', { timeout: 30000 });
+            await logo.click();
+            await heading.waitFor({ timeout: 30000 });
+            check('phone: logo resets a quiz in progress', (await page.locator('h3').count()) === 0);
+            // From another page it goes to Quick Test
+            await page.goto(BASE + '/history', { waitUntil: 'networkidle' });
+            await page.getByRole('link', { name: /start a new Quick Test/ }).click();
+            await heading.waitFor({ timeout: 30000 });
+            check('phone: logo goes to Quick Test from another page', new URL(page.url()).pathname === '/');
+        }
         await ctx.close();
     }
 } catch (e) {

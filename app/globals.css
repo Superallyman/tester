@@ -5,6 +5,10 @@
 @tailwind utilities;
 
 
+/* Base text size: everything in rem (Orbit, Tailwind, most inline styles) scales from this */
+html { font-size: 106.25%; }                                   /* 17px on phones */
+@media (min-width: 768px) { html { font-size: 112.5%; } }       /* 18px from tablets up */
+
 /* The app is styled with the Orbit kit (app/design/orbit/orbit.css): <body class="orbit orbit-backdrop">.
    Barlow comes from next/font in layout.tsx under a generated name, so point Orbit at it. */
 .orbit {

@@ -217,7 +217,7 @@ export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorP
                 )}
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(120px, 1fr) 2fr', gap: 16, alignItems: 'end' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 16, alignItems: 'end' }}>
                 <label className="orbit-field">
                     <span className="orbit-label">Question limit</span>
                     <input type="number" min={1} value={limit} onChange={(e) => handleLimitChange(parseInt(e.target.value) || 1)} className="orbit-input" />

@@ -7,25 +7,26 @@ import React, { useState } from 'react';
 import { Flame, Target } from 'lucide-react';
 import { useProgress } from './useProgress';
 
-// Same box in both states: the skeleton reserves exactly what the loaded card takes
-const CARD_STYLE: React.CSSProperties = { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px 28px', marginBottom: '1.5rem', minHeight: 108, boxSizing: 'border-box' };
+// Same box in both states
+const CARD_STYLE: React.CSSProperties = { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px 28px', marginBottom: '1.5rem', boxSizing: 'border-box' };
+
+// The skeleton is the loaded card's own markup with its text ghosted, so it is the same size at any font size
+const Ghost = ({ children }: { children: React.ReactNode }) => <span className="orbit-skeleton orbit-skeleton--ghost">{children}</span>;
 
 export function DailyProgressSkeleton() {
     return (
         <section aria-hidden="true" className="orbit-card" style={CARD_STYLE}>
-            <div style={{ flex: '1 1 220px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {/* Row as tall as "Today" plus the "Change goal" button */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: 26 }}>
-                    <span className="orbit-skeleton orbit-skeleton--text" style={{ width: 60 }} />
-                    <span className="orbit-skeleton orbit-skeleton--text" style={{ width: 90 }} />
+            <div style={{ flex: '1 1 220px', minWidth: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+                    <span className="orbit-label"><Ghost>Today</Ghost></span>
+                    <span className="orbit-btn orbit-btn--ghost" style={{ borderBottomColor: 'transparent' }}><Ghost>Change goal</Ghost></span>
                 </div>
-                {/* The "7 of 20 questions" line: 1.05rem at 1.6 line height, plus its 6px top margin */}
-                <span className="orbit-skeleton" style={{ width: 170, height: 21, margin: '1px 0' }} />
-                <span className="orbit-skeleton" style={{ height: 3 }} />
+                <div className="orbit-body" style={{ fontSize: '1.05rem', marginTop: 6 }}><Ghost>00 of 20 questions</Ghost></div>
+                <div className="orbit-progress" style={{ marginTop: 10 }} />
             </div>
-            <div style={{ display: 'flex', gap: 20 }}>
-                <span className="orbit-skeleton" style={{ width: 110, height: 20 }} />
-                <span className="orbit-skeleton" style={{ width: 130, height: 20 }} />
+            <div style={{ display: 'flex', gap: 20, fontSize: '0.85rem' }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Flame size={17} aria-hidden="true" style={{ opacity: 0.2 }} /><Ghost>0-day streak</Ghost></span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Target size={17} aria-hidden="true" style={{ opacity: 0.2 }} /><Ghost>0 goal days running</Ghost></span>
             </div>
         </section>
     );

@@ -22,7 +22,7 @@ const LINKS = [
   { href: "/leaderboard", label: "Leaderboard" },
 ];
 
-const small: React.CSSProperties = { fontSize: "0.62rem", fontWeight: 600, letterSpacing: "0.2em", textTransform: "uppercase", textDecoration: "none", color: "inherit" };
+const small: React.CSSProperties = { fontSize: "0.7rem", fontWeight: 600, letterSpacing: "0.18em", textTransform: "uppercase", textDecoration: "none", color: "inherit" };
 
 function AuthButton() {
   const { data: session } = useSession(); // go and get the session
@@ -67,9 +67,12 @@ export default function Navbar() {
   return (
     <nav className="orbit-glass sticky top-0 z-40 w-full" style={{ borderRadius: 0, borderLeft: "none", borderRight: "none", borderTop: "none" }}>
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 md:px-6 py-3">
-        <Link href="/" className="shrink-0 flex items-center gap-3" style={{ color: "inherit", textDecoration: "none" }}>
+        {/* Always lands on a fresh Quick Test: from another page a normal navigation does that, but on / itself
+            (where a quiz may be open) only a reload clears it */}
+        <Link href="/" aria-label="Tester: start a new Quick Test" className="shrink-0 flex items-center gap-3" style={{ color: "inherit", textDecoration: "none" }}
+          onClick={e => { if (pathname === "/") { e.preventDefault(); window.location.assign("/"); } }}>
           <Image src={Logo} alt="" width={40} className="dark:invert" />
-          <span className="hidden sm:inline" style={{ fontSize: "0.8rem", fontWeight: 500, letterSpacing: "0.28em", textTransform: "uppercase" }}>Tester</span>
+          <span style={{ fontSize: "0.9rem", fontWeight: 500, letterSpacing: "0.26em", textTransform: "uppercase" }}>Tester</span>
         </Link>
 
         {/* The wrapper does the hiding: .orbit-nav sets its own display, which would beat Tailwind's "hidden" */}

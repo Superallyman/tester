@@ -131,18 +131,18 @@ body.orbit-backdrop { min-height: 100vh; }
 .orbit .orbit-card { border-radius: var(--orbit-radius); padding: 16px; }
 
 /* ---------- Typography ---------- */
-.orbit .orbit-title { font-size: 1.8rem; font-weight: 300; letter-spacing: 0.06em; text-transform: uppercase; line-height: 1.15; margin: 0; }
-.orbit .orbit-h2 { font-size: 0.95rem; font-weight: 500; letter-spacing: 0.2em; text-transform: uppercase; margin: 0; }
-.orbit .orbit-body { font-size: 0.93rem; line-height: 1.6; margin: 0; }
-.orbit .orbit-muted { font-size: 0.78rem; color: var(--orbit-ink-soft); margin: 0; }
-.orbit .orbit-label { font-size: 0.62rem; font-weight: 600; letter-spacing: 0.24em; text-transform: uppercase; color: var(--orbit-ink-soft); margin: 0; }
+.orbit .orbit-title { font-size: 2rem; font-weight: 300; letter-spacing: 0.06em; text-transform: uppercase; line-height: 1.15; margin: 0; }
+.orbit .orbit-h2 { font-size: 1.02rem; font-weight: 500; letter-spacing: 0.2em; text-transform: uppercase; margin: 0; }
+.orbit .orbit-body { font-size: 1rem; line-height: 1.6; margin: 0; }
+.orbit .orbit-muted { font-size: 0.86rem; color: var(--orbit-ink-soft); margin: 0; }
+.orbit .orbit-label { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.24em; text-transform: uppercase; color: var(--orbit-ink-soft); margin: 0; }
 .orbit .orbit-stat { font-size: 2.7rem; font-weight: 200; line-height: 1; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
 
 /* ---------- Buttons ---------- */
 .orbit .orbit-btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 8px;
     border-radius: var(--orbit-radius); padding: 10px 20px; cursor: pointer;
-    font-size: 0.7rem; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; text-decoration: none;
+    font-size: 0.78rem; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; text-decoration: none;
     transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s, filter 0.2s;
 }
 .orbit .orbit-btn:hover { border-color: var(--orbit-hover-border); }
@@ -171,7 +171,7 @@ body.orbit-backdrop { min-height: 100vh; }
 .orbit .orbit-segment { display: inline-flex; padding: 3px; gap: 2px; border-radius: calc(var(--orbit-radius) + 1px); }
 .orbit .orbit-segment > button {
     border: none; background: none; color: inherit; cursor: pointer; padding: 7px 14px; border-radius: calc(var(--orbit-radius) - 2px);
-    font: inherit; font-size: 0.64rem; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.6;
+    font: inherit; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; opacity: 0.6;
 }
 .orbit .orbit-segment > button[aria-pressed="true"],
 .orbit .orbit-segment > button[aria-selected="true"] {
@@ -181,7 +181,7 @@ body.orbit-backdrop { min-height: 100vh; }
 /* ---------- Chips (toggle with aria-pressed; .is-excluded strikes through) ---------- */
 .orbit .orbit-chip {
     display: inline-flex; align-items: center; border-radius: calc(var(--orbit-radius) - 2px); padding: 4px 10px; cursor: pointer;
-    font-size: 0.62rem; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase;
+    font-size: 0.7rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase;
 }
 .orbit .orbit-chip[aria-pressed="true"], .orbit .orbit-chip.is-on {
     border-color: var(--orbit-good); box-shadow: inset 0 0 0 1px var(--orbit-good), 0 0 12px color-mix(in srgb, var(--orbit-good) 40%, transparent);
@@ -190,7 +190,7 @@ body.orbit-backdrop { min-height: 100vh; }
 
 /* ---------- Inputs ---------- */
 .orbit .orbit-input {
-    width: 100%; box-sizing: border-box; border-radius: var(--orbit-radius); padding: 10px 12px; font-size: 0.93rem; outline: none;
+    width: 100%; box-sizing: border-box; border-radius: var(--orbit-radius); padding: 10px 12px; font-size: 1rem; outline: none;
     transition: box-shadow 0.2s, border-color 0.2s;
 }
 .orbit .orbit-input::placeholder { color: inherit; opacity: 0.45; }
@@ -217,7 +217,7 @@ body.orbit-backdrop { min-height: 100vh; }
 /* ---------- Selectable rows: answers, list choices, settings ---------- */
 .orbit .orbit-option {
     width: 100%; box-sizing: border-box; display: flex; gap: 12px; align-items: center; text-align: left; cursor: pointer;
-    border-radius: var(--orbit-radius); padding: 12px 14px; font-size: 0.92rem; transition: border-color 0.15s, box-shadow 0.15s;
+    border-radius: var(--orbit-radius); padding: 12px 14px; font-size: 1rem; transition: border-color 0.15s, box-shadow 0.15s;
 }
 .orbit .orbit-option:hover { border-color: var(--orbit-hover-border); }
 .orbit .orbit-option[aria-checked="true"], .orbit .orbit-option[aria-pressed="true"], .orbit .orbit-option.is-selected {
@@ -237,11 +237,11 @@ body.orbit-backdrop { min-height: 100vh; }
 /* ---------- Status ---------- */
 .orbit .orbit-badge {
     display: inline-flex; align-items: center; border-radius: calc(var(--orbit-radius) / 2); padding: 2px 8px;
-    font-size: 0.58rem; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase;
+    font-size: 0.66rem; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase;
 }
 .orbit .orbit-badge--good { color: var(--orbit-good); }
 .orbit .orbit-badge--bad { color: var(--orbit-bad); box-shadow: inset 0 1px 0 var(--orbit-glass-edge), 0 0 10px color-mix(in srgb, var(--orbit-bad) 40%, transparent); }
-.orbit .orbit-alert { border-radius: var(--orbit-radius); padding: 10px 14px; font-size: 0.88rem; }
+.orbit .orbit-alert { border-radius: var(--orbit-radius); padding: 10px 14px; font-size: 0.95rem; }
 .orbit .orbit-alert--bad { box-shadow: inset 3px 0 0 var(--orbit-bad), var(--orbit-glass-shadow); }
 .orbit .orbit-alert--good { box-shadow: inset 3px 0 0 var(--orbit-good), var(--orbit-glass-shadow); }
 .orbit .orbit-alert--warn { box-shadow: inset 3px 0 0 var(--orbit-warn), var(--orbit-glass-shadow); }
@@ -254,7 +254,7 @@ body.orbit-backdrop { min-height: 100vh; }
 /* ---------- Navigation: aria-current="page" marks the active link ---------- */
 .orbit .orbit-nav {
     display: flex; flex-wrap: wrap; gap: 18px; align-items: center; border-radius: var(--orbit-radius); padding: 10px 16px;
-    font-size: 0.62rem; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase;
+    font-size: 0.72rem; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase;
 }
 .orbit .orbit-nav a { color: inherit; text-decoration: none; opacity: 0.55; padding-bottom: 3px; }
 .orbit .orbit-nav a:hover { opacity: 0.85; }
@@ -270,6 +270,8 @@ body.orbit-backdrop { min-height: 100vh; }
     animation: orbit-shimmer 1.4s ease-in-out infinite;
 }
 .orbit .orbit-skeleton--text { height: 0.8em; border-radius: 3px; }
+/* Wrap real sample text: it keeps the exact size of what will load, shown only as a shimmer */
+.orbit .orbit-skeleton--ghost { display: inline-block; height: auto; color: transparent !important; user-select: none; border-radius: 3px; }
 @keyframes orbit-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 
 /* ---------- Layout helpers ---------- */
