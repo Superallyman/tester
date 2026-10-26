@@ -32,7 +32,7 @@ interface Issued {
     tempPassword: string;
 }
 
-const card = "rounded-xl border border-black/10 dark:border-white/15 bg-black/[0.03] dark:bg-white/[0.04] p-4";
+const card = "orbit-card";
 
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 
@@ -78,12 +78,12 @@ export default function AdminUsersPage() {
 
     return (
         <div className="mx-auto w-full max-w-4xl px-4 py-6 flex flex-col gap-6">
-            <h1 className="text-2xl font-bold">Users</h1>
+            <h1 className="orbit-title">Users</h1>
 
-            {error && <p role="alert" className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm">{error}</p>}
+            {error && <p role="alert" className="orbit-alert orbit-alert--bad">{error}</p>}
 
             {issued && (
-                <div className="rounded-xl border border-green-500/40 bg-green-500/10 p-4 text-sm">
+                <div className="orbit-alert orbit-alert--good">
                     <p className="mb-2">Send these to <strong>{issued.email}</strong>. The password is shown only once, and they choose their own at first sign-in.</p>
                     <p className="font-mono text-base">Email: {issued.email}<br />Temporary password: <span className="select-all">{issued.tempPassword}</span></p>
                     <Button variant="ghost" size="sm" className="mt-2" onClick={() => setIssued(null)}>Done</Button>
@@ -111,8 +111,8 @@ export default function AdminUsersPage() {
                         <div className="min-w-0">
                             <p className="font-semibold">
                                 {u.name}
-                                {u.is_admin && <span className="ml-2 rounded bg-blue-500/15 px-1.5 py-0.5 text-xs font-medium">admin</span>}
-                                {u.disabled && <span className="ml-2 rounded bg-red-500/15 px-1.5 py-0.5 text-xs font-medium">disabled</span>}
+                                {u.is_admin && <span className="orbit-badge ml-2">admin</span>}
+                                {u.disabled && <span className="orbit-badge orbit-badge--bad ml-2">disabled</span>}
                             </p>
                             <p className="truncate text-sm opacity-80">{u.email}</p>
                             <p className="text-xs opacity-60">

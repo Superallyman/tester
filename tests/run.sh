@@ -26,8 +26,19 @@ status=0
 for f in "${files[@]}"; do
   wait_for_server || exit 1
   echo "=== $f"
-  npx tsx --env-file=.env.local "$f" 2>&1 | grep -v "Skipping host requirements" || true
-  [ "${PIPESTATUS[0]}" -eq 0 ] || status=1
+  out=$(npx tsx --env-file=.env.local "$f" 2>&1 | grep -v "Skipping host requirements"; exit "${PIPESTATUS[0]}")
+  code=$?
+  # A dropped connection means the dev server restarted mid-file (see above), not that a check failed:
+  # wait for it and run the file once more, saying so
+  if [ $code -ne 0 ] && grep -qE "ECONNRESET|socket hang up|ECONNREFUSED" <<<"$out"; then
+    echo "$out" | grep -E "^(PASS|FAIL)" | tail -3
+    echo "--- dev server dropped the connection (restart); running $f again"
+    wait_for_server || exit 1
+    out=$(npx tsx --env-file=.env.local "$f" 2>&1 | grep -v "Skipping host requirements"; exit "${PIPESTATUS[0]}")
+    code=$?
+  fi
+  echo "$out"
+  [ $code -eq 0 ] || status=1
 done
 [ $status -eq 0 ] && echo "=== all test files passed" || echo "=== SOME TESTS FAILED"
 exit $status

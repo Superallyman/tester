@@ -9,6 +9,7 @@ import QuestionNotes from '../components/QuestionNotes';
 import { useNotes } from '../components/useNotes';
 import DifficultyLine from '../components/DifficultyLine';
 import { useDifficulty } from '../components/useDifficulty';
+import { edge, glass, glassCard } from '@/utils/orbitStyles';
 
 interface ExamResultsProps {
     summary: ExamSummary;
@@ -18,14 +19,10 @@ interface ExamResultsProps {
 
 type ItemFilter = 'incorrect' | 'all' | 'flagged' | 'unanswered' | 'critiqued' | 'slowest';
 
-const card: React.CSSProperties = {
-    padding: '1.25rem',
-    border: '1px solid rgba(128,128,128,0.2)',
-    borderRadius: '12px',
-    background: 'rgba(128,128,128,0.05)',
-};
+// Orbit glass surface
+const card: React.CSSProperties = glassCard;
 
-const scoreColor = (pct: number) => (pct >= 70 ? '#10b981' : pct >= 55 ? '#f59e0b' : '#ef4444');
+const scoreColor = (pct: number) => (pct >= 70 ? 'var(--orbit-good)' : pct >= 55 ? 'var(--orbit-warn)' : 'var(--orbit-bad)');
 
 function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
     return (
@@ -107,11 +104,11 @@ export default function ExamResults({ summary, questions, onNewExam }: ExamResul
 
     return (
         <main style={{ maxWidth: '900px', margin: '0 auto', padding: '1.5rem 1rem 3rem' }}>
-            <div style={{ ...card, borderColor: '#006daa', textAlign: 'center', marginBottom: '1.25rem' }}>
+            <div style={{ ...card, borderColor: 'var(--orbit-primary-bg)', textAlign: 'center', marginBottom: '1.25rem' }}>
                 <div style={{ fontSize: '0.75rem', opacity: 0.7, letterSpacing: '0.05em' }}>NBEO PART I ABS PRACTICE · {summary.label.toUpperCase()}</div>
                 <div style={{ fontSize: '3rem', fontWeight: 800, color: scoreColor(pct), lineHeight: 1.1, margin: '8px 0' }}>{pct.toFixed(1)}%</div>
                 <div style={{ fontSize: '1rem' }}>{summary.correct} of {summary.total} correct</div>
-                <div style={{ background: 'rgba(128,128,128,0.2)', height: 8, borderRadius: 10, overflow: 'hidden', margin: '14px auto 0', maxWidth: 480 }}>
+                <div className="orbit-progress" style={{ margin: '14px auto 0', maxWidth: 480 }}>
                     <div style={{ background: scoreColor(pct), height: '100%', width: `${pct}%` }} />
                 </div>
                 <p style={{ fontSize: '0.75rem', opacity: 0.6, margin: '12px 0 0' }}>
@@ -156,8 +153,8 @@ export default function ExamResults({ summary, questions, onNewExam }: ExamResul
 
             <section style={{ ...card, marginBottom: '1.25rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
-                    <h2 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0 }}>By category</h2>
-                    {category && <button onClick={() => setCategory(null)} style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontSize: '0.85rem' }}>Clear filter</button>}
+                    <h2 className="orbit-h2">By category</h2>
+                    {category && <button onClick={() => setCategory(null)} style={{ background: 'none', border: 'none', color: 'var(--orbit-accent)', cursor: 'pointer', fontSize: '0.85rem' }}>Clear filter</button>}
                 </div>
                 <div style={{ display: 'grid', gap: 6 }}>
                     {breakdown.map(b => (
@@ -171,7 +168,7 @@ export default function ExamResults({ summary, questions, onNewExam }: ExamResul
                             }}
                         >
                             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={b.cat}>{b.cat}</span>
-                            <span style={{ background: 'rgba(128,128,128,0.2)', height: 8, borderRadius: 8, overflow: 'hidden' }}>
+                            <span className="orbit-progress">
                                 <span style={{ display: 'block', background: scoreColor(b.pct), height: '100%', width: `${b.pct}%` }} />
                             </span>
                             <span style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{b.correct}/{b.total}</span>
@@ -182,11 +179,11 @@ export default function ExamResults({ summary, questions, onNewExam }: ExamResul
 
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: '1.25rem' }}>
                 {summary.incorrectIds.length > 0 && (
-                    <button onClick={drillMissed} style={{ flex: '1 1 220px', padding: 14, background: '#0070f3', color: 'white', border: 'none', borderRadius: 8, fontWeight: 'bold', cursor: 'pointer' }}>
+                    <button onClick={drillMissed} className="orbit-btn orbit-btn--accent" style={{ flex: '1 1 220px', padding: 14 }}>
                         Drill the {summary.incorrectIds.length} missed items in Quick Test
                     </button>
                 )}
-                <button onClick={onNewExam} style={{ flex: '1 1 220px', padding: 14, background: '#006daa', color: 'white', border: 'none', borderRadius: 8, fontWeight: 'bold', cursor: 'pointer' }}>
+                <button onClick={onNewExam} className="orbit-btn orbit-btn--primary" style={{ flex: '1 1 220px', padding: 14 }}>
                     New Practice Exam
                 </button>
             </div>
@@ -199,8 +196,8 @@ export default function ExamResults({ summary, questions, onNewExam }: ExamResul
                             onClick={() => setFilter(f)}
                             style={{
                                 padding: '6px 12px', borderRadius: 16, cursor: 'pointer', fontSize: '0.8rem',
-                                border: `1px solid ${filter === f ? '#0070f3' : 'rgba(128,128,128,0.3)'}`,
-                                background: filter === f ? '#0070f3' : 'transparent', color: filter === f ? 'white' : 'inherit',
+                                border: `1px solid ${filter === f ? 'var(--orbit-accent)' : 'rgba(128,128,128,0.3)'}`,
+                                background: filter === f ? 'var(--orbit-accent)' : 'transparent', color: filter === f ? 'white' : 'inherit',
                             }}
                         >
                             {f[0].toUpperCase() + f.slice(1)} ({counts[f]})
@@ -222,14 +219,14 @@ export default function ExamResults({ summary, questions, onNewExam }: ExamResul
                                 onClick={() => setExpanded(e => ({ ...e, [q.id]: !open }))}
                                 style={{ display: 'flex', gap: 10, width: '100%', background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', textAlign: 'left', padding: 0 }}
                             >
-                                <span style={{ fontWeight: 700, color: sel.length === 0 ? '#9ca3af' : ok ? '#10b981' : '#ef4444', minWidth: 52 }}>
+                                <span style={{ fontWeight: 700, color: sel.length === 0 ? '#9ca3af' : ok ? 'var(--orbit-good)' : 'var(--orbit-bad)', minWidth: 52 }}>
                                     #{idx + 1} {sel.length === 0 ? '—' : ok ? '✓' : '✕'}
                                 </span>
                                 <span style={{ flex: 1, lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: open ? 'unset' : 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                                     {q.question_text}
                                 </span>
                                 {spent[q.id] > 0 && <span title="Time on this item" style={{ fontSize: '0.75rem', opacity: 0.6, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{formatClock(spent[q.id]).replace(/^0:/, '')}</span>}
-                                {summary.flaggedIds.includes(q.id) && <span title="Flagged" style={{ color: '#f59e0b' }}>⚑</span>}
+                                {summary.flaggedIds.includes(q.id) && <span title="Flagged" style={{ color: 'var(--orbit-warn)' }}>⚑</span>}
                             </button>
                             {open && (
                                 <div style={{ marginTop: 12 }}>
@@ -245,7 +242,7 @@ export default function ExamResults({ summary, questions, onNewExam }: ExamResul
                                                     background: right ? 'rgba(16,185,129,0.08)' : picked ? 'rgba(239,68,68,0.08)' : 'transparent',
                                                 }}>
                                                     <span><strong>{LETTERS[i]}.</strong> {opt}</span>
-                                                    <span style={{ fontWeight: 700, color: right ? (picked ? '#10b981' : '#3b82f6') : '#ef4444' }}>
+                                                    <span style={{ fontWeight: 700, color: right ? (picked ? 'var(--orbit-good)' : 'var(--orbit-accent)') : 'var(--orbit-bad)' }}>
                                                         {right ? (picked ? '✓' : 'answer') : picked ? '✕' : ''}
                                                     </span>
                                                 </div>
@@ -253,13 +250,13 @@ export default function ExamResults({ summary, questions, onNewExam }: ExamResul
                                         })}
                                     </div>
                                     {q.explanation && (
-                                        <div style={{ background: 'rgba(59,130,246,0.1)', padding: 12, borderRadius: 8, fontSize: '0.88rem', marginTop: 12, borderLeft: '4px solid #3b82f6', whiteSpace: 'pre-wrap' }}>
-                                            <strong style={{ color: '#3b82f6' }}>Explanation:</strong> {q.explanation}
+                                        <div style={{ ...glass, padding: 12, fontSize: '0.88rem', marginTop: 12, whiteSpace: 'pre-wrap', ...edge('var(--orbit-accent)') }}>
+                                            <strong style={{ color: 'var(--orbit-accent)' }}>Explanation:</strong> {q.explanation}
                                         </div>
                                     )}
                                     {summary.critiques[q.id] && (
-                                        <div style={{ background: 'rgba(245,158,11,0.1)', padding: 10, borderRadius: 8, fontSize: '0.85rem', marginTop: 8, borderLeft: '4px solid #f59e0b' }}>
-                                            <strong style={{ color: '#d97706' }}>Your critique:</strong> {summary.critiques[q.id]}
+                                        <div style={{ ...glass, padding: 10, fontSize: '0.85rem', marginTop: 8, ...edge('var(--orbit-warn)') }}>
+                                            <strong style={{ color: 'var(--orbit-warn)' }}>Your critique:</strong> {summary.critiques[q.id]}
                                         </div>
                                     )}
                                     <div style={{ marginTop: 12 }}><DifficultyLine stat={difficulty[q.id]} /></div>

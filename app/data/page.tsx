@@ -206,26 +206,29 @@ export default function AnalyticsPage() {
   }, [stats, sortBy, searchTerm]);
 
   const getDelusionLabel = (score: number) => {
-    if (score > 30) return { label: "Highly Delusional", color: "#ef4444" };
-    if (score > 10) return { label: "Overconfident", color: "#f59e0b" };
-    if (score < -15) return { label: "Imposter Syndrome", color: "#60a5fa" };
-    return { label: "Self-Aware", color: "#10b981" };
+    if (score > 30) return { label: "Highly Delusional", color: "var(--orbit-bad)" };
+    if (score > 10) return { label: "Overconfident", color: "var(--orbit-warn)" };
+    if (score < -15) return { label: "Imposter Syndrome", color: "var(--orbit-accent)" };
+    return { label: "Self-Aware", color: "var(--orbit-good)" };
   };
 
-  if (loading) return <p style={{ padding: '2rem' }}>Crunching numbers...</p>;
-  if (!stats || stats.total === 0) return <p style={{ padding: '2rem' }}>Go tackle some questions to see your data!</p>;
+  if (loading) return <p className="orbit-muted" style={{ padding: '2rem', textAlign: 'center' }}>Crunching numbers…</p>;
+  if (!stats || stats.total === 0) return <p className="orbit-body" style={{ padding: '2rem', textAlign: 'center' }}>Go tackle some questions to see your data!</p>;
 
   return (
-    <main style={{ maxWidth: '900px', margin: '0 auto', padding: '2rem', fontFamily: 'sans-serif' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-        <h1>Performance & Insights</h1>
-        <div style={{ padding: '8px 16px', borderRadius: '20px', border: '2px solid #f59e0b', color: '#f59e0b', fontWeight: 'bold' }}>
-          {progress?.streak ?? stats.streak}-day streak
+    <main style={{ maxWidth: '960px', margin: '0 auto', padding: '2rem 1rem 4rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap', marginBottom: '1.75rem' }}>
+        <div>
+          <p className="orbit-label">Analytics</p>
+          <h1 className="orbit-title" style={{ marginTop: 6 }}>Performance &amp; Insights</h1>
         </div>
+        <span className="orbit-badge" style={{ color: 'var(--orbit-warn)', fontSize: '0.66rem', padding: '6px 12px' }}>
+          {progress?.streak ?? stats.streak}-day streak
+        </span>
       </div>
 
       {progress && (
-        <section style={{ marginBottom: '2.5rem', padding: '1.25rem', borderRadius: '12px', border: '1px solid rgba(128,128,128,0.25)' }}>
+        <section className="orbit-card" style={{ marginBottom: '2rem' }}>
           <StudyHeatmap days={progress.days} today={progress.today} />
         </section>
       )}
@@ -234,164 +237,100 @@ export default function AnalyticsPage() {
 
       {/* --- Overall Stats Summary Component --- */}
       <section style={{ marginBottom: '2.5rem' }}>
-        <h3 style={{ marginBottom: '1rem' }}>Overall Performance Overview</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-
-          {/* Total Attempted Card */}
-          <div style={{ padding: '1.25rem', borderRadius: '12px', background: 'rgba(255, 255, 255, 0.04)', border: '1px solid #333' }}>
-            <span style={{ fontSize: '0.85rem', color: '#aaa', display: 'block', marginBottom: '6px' }}>Total Practice Volume</span>
-            <div style={{ fontSize: '1.8rem', fontWeight: 'bold' }}>{stats.total}</div>
-            <span style={{ fontSize: '0.75rem', color: '#888' }}>
-              {stats.categories.reduce((acc, cat) => acc + cat.seenCount, 0)} out of {' '}
-              {stats.categories.reduce((acc, cat) => acc + cat.totalInDb, 0)} total unique questions
+        <h2 className="orbit-h2" style={{ marginBottom: '1rem' }}>Overall Performance</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
+          <div className="orbit-card">
+            <span className="orbit-label" style={{ display: 'block' }}>Total Practice Volume</span>
+            <div className="orbit-stat" style={{ margin: '10px 0 8px' }}>{stats.total}</div>
+            <span className="orbit-muted">
+              {stats.categories.reduce((acc, cat) => acc + cat.seenCount, 0)} of {' '}
+              {stats.categories.reduce((acc, cat) => acc + cat.totalInDb, 0)} unique questions seen
             </span>
           </div>
-
-          {/* Correctly Answered Card */}
-          <div style={{ padding: '1.25rem', borderRadius: '12px', background: 'rgba(255, 255, 255, 0.04)', border: '1px solid #333' }}>
-            <span style={{ fontSize: '0.85rem', color: '#aaa', display: 'block', marginBottom: '6px' }}>Questions Correct</span>
-            <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#10b981' }}>{stats.totalCorrect}</div>
-            <span style={{ fontSize: '0.75rem', color: '#888' }}>
-              Out of {stats.total} total attempts
-            </span>
+          <div className="orbit-card">
+            <span className="orbit-label" style={{ display: 'block' }}>Questions Correct</span>
+            <div className="orbit-stat" style={{ margin: '10px 0 8px', color: 'var(--orbit-good)' }}>{stats.totalCorrect}</div>
+            <span className="orbit-muted">Out of {stats.total} attempts</span>
           </div>
-
-          {/* Overall Accuracy Card */}
-          <div style={{ padding: '1.25rem', borderRadius: '12px', background: 'rgba(255, 255, 255, 0.04)', border: '1px solid #333' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '6px' }}>
-              <span style={{ fontSize: '0.85rem', color: '#aaa' }}>Overall Accuracy</span>
-              <span style={{ fontSize: '1.2rem', fontWeight: 'bold', color: stats.overallAccuracy >= 70 ? '#10b981' : stats.overallAccuracy >= 50 ? '#0070f3' : '#ef4444' }}>
-                {stats.overallAccuracy.toFixed(1)}%
-              </span>
-            </div>
-
-            <div style={{ height: '8px', background: '#222', borderRadius: '4px', overflow: 'hidden', marginTop: '12px' }}>
-              <div style={{
-                height: '100%',
-                width: `${stats.overallAccuracy}%`,
-                background: stats.overallAccuracy >= 70 ? '#10b981' : stats.overallAccuracy >= 50 ? '#0070f3' : '#ef4444',
-                transition: 'width 0.4s ease'
-              }} />
+          <div className="orbit-card">
+            <span className="orbit-label" style={{ display: 'block' }}>Overall Accuracy</span>
+            <div className="orbit-stat" style={{ margin: '10px 0 12px' }}>{stats.overallAccuracy.toFixed(1)}%</div>
+            <div className={`orbit-progress ${stats.overallAccuracy >= 70 ? 'orbit-progress--good' : ''}`}>
+              <span style={{ width: `${stats.overallAccuracy}%`, transition: 'width 0.4s ease' }} />
             </div>
           </div>
-
         </div>
       </section>
 
-
-      <div style={{ marginBottom: '2rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '10px', flexWrap: 'wrap', gap: '10px' }}>
-          <h2 style={{ margin: 0 }}>Category Breakdown</h2>
-
-          <div style={{ position: 'relative', width: '100%', maxWidth: '300px' }}>
+      <div style={{ marginBottom: '1.5rem' }} className="orbit-stack">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 12 }}>
+          <h2 className="orbit-h2" style={{ margin: 0 }}>Category Breakdown</h2>
+          <div style={{ position: 'relative', width: '100%', maxWidth: 300 }}>
             <input
               type="text"
               placeholder="Search categories..."
               value={searchTerm}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '10px 15px',
-                paddingRight: '35px',
-                borderRadius: '8px',
-                border: '1px solid #444',
-                background: 'rgba(255,255,255,0.05)',
-                color: 'white',
-                fontSize: '0.9rem',
-                outline: 'none'
-              }}
+              className="orbit-input"
+              style={{ paddingRight: 34 }}
             />
             {searchTerm && (
-              <button
-                onClick={() => setSearchTerm('')}
-                style={{
-                  position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
-                  background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: '1.1rem'
-                }}
-              >
+              <button onClick={() => setSearchTerm('')} aria-label="Clear search"
+                style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'inherit', opacity: 0.5, cursor: 'pointer', fontSize: '1.1rem' }}>
                 ×
               </button>
             )}
           </div>
-
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            {(['urgency', 'mastery', 'worst', 'best', 'alpha', 'frustration'] as SortType[]).map(type => (
-              <button
-                key={type}
-                onClick={() => setSortBy(type)}
-                onMouseEnter={() => setHoveredSort(type)}
-                onMouseLeave={() => setHoveredSort(null)}
-                style={{
-                  padding: '8px 14px',
-                  borderRadius: '8px',
-                  border: '1px solid #444',
-                  background: sortBy === type ? '#0070f3' : 'transparent',
-                  color: sortBy === type ? 'white' : 'inherit',
-                  cursor: 'pointer',
-                  fontSize: '0.85rem',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                {type.charAt(0).toUpperCase() + type.slice(1)}
-              </button>
-            ))}
-          </div>
         </div>
-        <div style={{ minHeight: '20px', fontSize: '0.85rem', color: '#aaa', fontStyle: 'italic', paddingLeft: '5px', borderLeft: '2px solid #0070f3' }}>
+        <div className="orbit-segment" role="group" aria-label="Sort categories" style={{ flexWrap: 'wrap', alignSelf: 'flex-start' }}>
+          {(['urgency', 'mastery', 'worst', 'best', 'alpha', 'frustration'] as SortType[]).map(type => (
+            <button key={type} aria-pressed={sortBy === type} onClick={() => setSortBy(type)}
+              onMouseEnter={() => setHoveredSort(type)} onMouseLeave={() => setHoveredSort(null)}>
+              {type}
+            </button>
+          ))}
+        </div>
+        <p className="orbit-muted" style={{ minHeight: 20, paddingLeft: 10, borderLeft: '1px solid var(--orbit-accent)' }}>
           {hoveredSort ? sortExplanations[hoveredSort] : sortExplanations[sortBy]}
-        </div>
+        </p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 340px), 1fr))', gap: 16 }}>
         {filteredAndSortedCategories.map((cat) => {
           const delusion = getDelusionLabel(cat.delusionScore);
+          const accColor = cat.accuracy > 70 ? 'var(--orbit-good)' : cat.accuracy > 40 ? 'var(--orbit-accent)' : 'var(--orbit-bad)';
           return (
-            <div key={cat.name} style={{ padding: '1.2rem', border: '1px solid #333', borderRadius: '12px', position: 'relative', background: 'rgba(128, 128, 128, 0.08)' }}>
+            <div key={cat.name} className="orbit-card orbit-stack" style={{ position: 'relative', gap: 10 }}>
               {sortBy === 'urgency' && cat.urgency > 2 && (
-                <span style={{ position: 'absolute', top: '-10px', right: '10px', background: '#ef4444', color: 'white', fontSize: '0.6rem', padding: '2px 8px', borderRadius: '10px' }}>PRIORITY</span>
+                <span className="orbit-badge orbit-badge--bad" style={{ position: 'absolute', top: -9, right: 12 }}>Priority</span>
               )}
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                <strong style={{ fontSize: '1.1rem' }}>{cat.name}</strong>
-                <span style={{ fontWeight: 'bold', color: cat.accuracy > 75 ? '#10b981' : 'inherit' }}>{cat.accuracy.toFixed(0)}%</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'baseline' }}>
+                <strong style={{ fontSize: '1.02rem', fontWeight: 500 }}>{cat.name}</strong>
+                <span style={{ fontSize: '1.5rem', fontWeight: 300, fontVariantNumeric: 'tabular-nums' }}>{cat.accuracy.toFixed(0)}%</span>
+              </div>
+              <span className="orbit-label">Last attempted {formatTimeAgo(cat.lastAttempted)}</span>
+
+              <div className="orbit-progress"><span style={{ width: `${cat.accuracy}%`, background: accColor, boxShadow: `0 0 10px ${accColor}` }} /></div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px', fontSize: '0.82rem' }}>
+                <span>Avg confidence <strong>{cat.avgRating.toFixed(1)}/4</strong></span>
+                <span style={{ textAlign: 'right' }}>Seen <strong>{cat.seenCount}/{cat.totalInDb}</strong></span>
+                <span>Avg satisfaction <strong style={{ color: cat.avgSatisfaction > 3 ? 'var(--orbit-good)' : 'inherit' }}>{cat.avgSatisfaction.toFixed(1)}/4</strong></span>
+                <span style={{ textAlign: 'right', color: cat.masteredCount === cat.totalInDb ? 'var(--orbit-good)' : 'inherit' }}>Mastered <strong>{cat.masteredCount}/{cat.totalInDb}</strong></span>
               </div>
 
-              <div style={{ fontSize: '0.7rem', color: '#888', marginBottom: '10px' }}>
-                Last Attempted: {formatTimeAgo(cat.lastAttempted)}
+              {/* Seen (faint) and mastered (glowing) share one track */}
+              <div className="orbit-progress" style={{ position: 'relative' }}>
+                <span style={{ position: 'absolute', width: `${(cat.seenCount / cat.totalInDb) * 100}%`, opacity: 0.3, boxShadow: 'none' }} />
+                <span style={{ position: 'absolute', width: `${(cat.masteredCount / cat.totalInDb) * 100}%`, background: 'var(--orbit-good)', boxShadow: '0 0 8px var(--orbit-good)' }} />
               </div>
 
-              <div style={{ height: '8px', background: '#222', borderRadius: '4px', overflow: 'hidden', marginBottom: '12px' }}>
-                <div style={{ height: '100%', width: `${cat.accuracy}%`, background: cat.accuracy > 70 ? '#10b981' : cat.accuracy > 40 ? '#0070f3' : '#ef4444' }} />
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', opacity: 0.9, marginBottom: '4px' }}>
-                <span>Avg Confidence: <strong>{cat.avgRating.toFixed(1)}/4</strong></span>
-                <span>Seen: <strong>{cat.seenCount}/{cat.totalInDb}</strong></span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', opacity: 0.9, marginBottom: '4px' }}>
-                <span>Avg Satisfaction: <strong style={{ color: cat.avgSatisfaction > 3 ? '#10b981' : 'inherit' }}>{cat.avgSatisfaction.toFixed(1)}/4</strong></span>
-                <span style={{ color: cat.masteredCount === cat.totalInDb ? '#10b981' : 'inherit' }}>
-                  Mastered: <strong>{cat.masteredCount}/{cat.totalInDb}</strong>
-                </span>
-              </div>
-
-              <div style={{ height: '4px', background: '#222', borderRadius: '2px', overflow: 'hidden', marginBottom: '12px' }}>
-                <div style={{ position: 'relative', height: '100%', width: '100%', background: '#333' }}>
-                  <div style={{
-                    position: 'absolute', height: '100%', width: `${(cat.seenCount / cat.totalInDb) * 100}%`,
-                    background: '#60a5fa', opacity: 0.3
-                  }} />
-                  <div style={{
-                    position: 'absolute', height: '100%', width: `${(cat.masteredCount / cat.totalInDb) * 100}%`,
-                    background: '#10b981', boxShadow: '0 0 5px rgba(16, 185, 129, 0.4)'
-                  }} />
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginTop: '12px', paddingTop: '10px', borderTop: '1px solid #333' }}>
-                <span style={{ color: '#aaa' }}>{cat.volume} Total Attempts</span>
-                <span style={{ color: delusion.color, fontWeight: 'bold' }}>
-                  Index: {cat.delusionScore.toFixed(0)} ({delusion.label})
+              <hr className="orbit-divider" style={{ margin: '2px 0' }} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                <span className="orbit-muted">{cat.volume} attempts</span>
+                <span className="orbit-label" style={{ color: delusion.color, opacity: 1 }}>
+                  Index {cat.delusionScore.toFixed(0)} · {delusion.label}
                 </span>
               </div>
             </div>
@@ -400,9 +339,9 @@ export default function AnalyticsPage() {
       </div>
 
       {filteredAndSortedCategories.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '3rem', color: '#666' }}>
+        <p className="orbit-muted" style={{ textAlign: 'center', padding: '3rem' }}>
           No categories found matching &quot;{searchTerm}&quot;
-        </div>
+        </p>
       )}
     </main>
   );

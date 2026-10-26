@@ -21,13 +21,13 @@ export default function ReportQuestion({ questionId }: { questionId: string }) {
     const [error, setError] = useState<string | null>(null);
 
     if (state === 'sent') {
-        return <span style={{ fontSize: '0.75rem', color: '#10b981' }}>✓ Reported. Thanks, an admin will take a look.</span>;
+        return <span className="orbit-label" style={{ color: 'var(--orbit-good)', opacity: 1, textTransform: 'none', letterSpacing: '0.04em' }}>✓ Reported. Thanks, an admin will take a look.</span>;
     }
 
     if (!open) {
         return (
-            <button onClick={() => setOpen(true)}
-                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'inherit', opacity: 0.55, fontSize: '0.75rem' }}>
+            <button onClick={() => setOpen(true)} className="orbit-label"
+                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit' }}>
                 ⚑ Report a problem
             </button>
         );
@@ -49,32 +49,25 @@ export default function ReportQuestion({ questionId }: { questionId: string }) {
 
     return (
         // Keys typed here are for the form, not the quiz's keyboard shortcuts
-        <div onKeyDown={e => e.stopPropagation()}
-            style={{ width: '100%', marginTop: '10px', padding: '12px', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.35)', background: 'rgba(239,68,68,0.05)', textAlign: 'left' }}>
-            <div style={{ fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '8px' }}>What&apos;s wrong with this question?</div>
-            <div role="radiogroup" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
+        <div onKeyDown={e => e.stopPropagation()} className="orbit-card orbit-stack"
+            style={{ width: '100%', marginTop: 10, gap: 10, boxShadow: 'inset 3px 0 0 var(--orbit-bad), var(--orbit-glass-shadow)' }}>
+            <span className="orbit-label">What&apos;s wrong with this question?</span>
+            <div role="radiogroup" className="orbit-row" style={{ gap: 6 }}>
                 {REASONS.map(r => (
                     <button key={r.value} role="radio" aria-checked={reason === r.value} onClick={() => setReason(r.value)}
-                        style={{
-                            padding: '5px 10px', borderRadius: '14px', fontSize: '0.75rem', cursor: 'pointer',
-                            border: reason === r.value ? '1px solid #ef4444' : '1px solid rgba(128,128,128,0.35)',
-                            background: reason === r.value ? '#ef4444' : 'transparent', color: reason === r.value ? 'white' : 'inherit',
-                        }}>
+                        className={`orbit-chip ${reason === r.value ? 'is-on' : ''}`}
+                        style={reason === r.value ? { borderColor: 'var(--orbit-bad)', boxShadow: '0 0 12px color-mix(in srgb, var(--orbit-bad) 35%, transparent)' } : undefined}>
                         {r.label}
                     </button>
                 ))}
             </div>
-            <textarea value={comment} onChange={e => setComment(e.target.value)} maxLength={2000} rows={2}
+            <textarea value={comment} onChange={e => setComment(e.target.value)} maxLength={2000} rows={2} className="orbit-input"
                 placeholder={reason === 'wrong_answer' ? 'Which answer should it be, and why? A source helps.' : 'Details (optional)'}
-                style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid rgba(128,128,128,0.35)', background: 'transparent', color: 'inherit', fontSize: '0.8rem', fontFamily: 'inherit' }} />
-            {error && <div role="alert" style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '4px' }}>{error}</div>}
-            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '8px' }}>
-                <button onClick={() => { setOpen(false); setError(null); }}
-                    style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid rgba(128,128,128,0.35)', background: 'transparent', color: 'inherit', cursor: 'pointer', fontSize: '0.8rem' }}>
-                    Cancel
-                </button>
-                <button onClick={send} disabled={state === 'sending'}
-                    style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', background: '#ef4444', color: 'white', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                style={{ fontSize: '0.88rem' }} />
+            {error && <div role="alert" className="orbit-muted" style={{ color: 'var(--orbit-bad)' }}>{error}</div>}
+            <div className="orbit-row" style={{ justifyContent: 'flex-end' }}>
+                <button onClick={() => { setOpen(false); setError(null); }} className="orbit-btn">Cancel</button>
+                <button onClick={send} disabled={state === 'sending'} className="orbit-btn orbit-btn--danger">
                     {state === 'sending' ? 'Sending…' : 'Send report'}
                 </button>
             </div>

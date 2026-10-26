@@ -8,6 +8,7 @@ import { FinishedExam } from './examSync';
 import PastExams from './PastExams';
 import Challenges, { Challenge } from './Challenges';
 import { BLUEPRINT, BLUEPRINT_SOURCE, SCORED_ITEMS, blueprintKey, blueprintQuotas } from './blueprint';
+import { edge, glass, glassCard } from '@/utils/orbitStyles';
 
 export type PoolFilter = 'all' | 'unseen' | 'notMastered' | 'missed';
 
@@ -27,12 +28,8 @@ interface ExamSetupProps {
     onDelete: (id: string) => void;
 }
 
-const card: React.CSSProperties = {
-    padding: '1.25rem',
-    border: '1px solid rgba(128,128,128,0.2)',
-    borderRadius: '12px',
-    background: 'rgba(128,128,128,0.05)',
-};
+// Orbit glass surface
+const card: React.CSSProperties = glassCard;
 
 const label: React.CSSProperties = { fontSize: '0.65rem', opacity: 0.6, letterSpacing: '0.05em', display: 'block', marginBottom: 6 };
 
@@ -89,33 +86,30 @@ export default function ExamSetup({
         challenges && asChallenge ? (challengeTitle.trim() || `${label_} challenge`) : undefined,
     );
 
+    // A choice tile in Orbit's selectable-row style; the chosen one glows in the accent
     const optionButton = (active: boolean): React.CSSProperties => ({
-        padding: '12px',
-        textAlign: 'left',
-        borderRadius: '8px',
-        border: `1px solid ${active ? '#0070f3' : 'rgba(128,128,128,0.3)'}`,
-        background: active ? 'rgba(0,112,243,0.12)' : 'transparent',
-        color: 'inherit',
-        cursor: 'pointer',
+        ...glass, padding: 12, textAlign: 'left', color: 'inherit', cursor: 'pointer', display: 'block', width: '100%',
+        ...(active ? { borderColor: 'color-mix(in srgb, var(--orbit-accent) 80%, transparent)', boxShadow: 'inset 3px 0 0 var(--orbit-accent), 0 0 18px color-mix(in srgb, var(--orbit-accent) 28%, transparent)' } : {}),
     });
 
     return (
         <main style={{ maxWidth: '860px', margin: '0 auto', padding: '1.5rem 1rem 3rem' }}>
-            <h1 style={{ margin: '0 0 6px', fontSize: '1.7rem', fontWeight: 700 }}>NBEO Part I ABS Practice Exam</h1>
+            <p className="orbit-label">Practice exam</p>
+            <h1 className="orbit-title" style={{ margin: '6px 0 8px' }}>NBEO Part I ABS Practice Exam</h1>
             <p style={{ opacity: 0.7, margin: '0 0 1.25rem', fontSize: '0.95rem' }}>
                 Simulates the Pearson VUE testing interface used on exam day: timed session, Flag for Review, Navigator,
                 Highlight / Strikethrough, scientific calculator, My Notes, Drug List and the end-of-session Review screen.
             </p>
 
             {resumable && (
-                <div style={{ ...card, borderColor: '#f59e0b', background: 'rgba(245,158,11,0.08)', marginBottom: '1.25rem' }}>
+                <div style={{ ...card, marginBottom: '1.25rem', ...edge('var(--orbit-warn)') }}>
                     <strong>Exam in progress</strong>
                     <p style={{ margin: '6px 0 12px', fontSize: '0.9rem', opacity: 0.85 }}>
                         {resumable.state.config.label} · {Object.values(resumable.state.answers).filter(a => a.length).length}/{resumable.total} answered ·{' '}
                         {resumable.state.remainingSec !== null ? `${formatClock(resumable.state.remainingSec)} remaining` : `${formatClock(resumable.state.elapsedSec)} elapsed`}
                     </p>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                        <button onClick={onResume} style={{ padding: '10px 18px', background: '#0070f3', color: 'white', border: 'none', borderRadius: 8, fontWeight: 'bold', cursor: 'pointer' }}>Resume Exam</button>
+                        <button onClick={onResume} className="orbit-btn orbit-btn--primary">Resume Exam</button>
                         <button onClick={() => { if (confirm('Discard the exam in progress?')) onDiscardResume(); }} style={{ padding: '10px 18px', background: 'transparent', color: 'inherit', border: '1px solid rgba(128,128,128,0.4)', borderRadius: 8, cursor: 'pointer' }}>Discard</button>
                     </div>
                 </div>
@@ -140,7 +134,7 @@ export default function ExamSetup({
                                 value={customCount}
                                 onClick={e => { e.stopPropagation(); setPreset('custom'); }}
                                 onChange={e => setCustomCount(parseInt(e.target.value) || 1)}
-                                style={{ width: 64, padding: '2px 6px', background: 'rgba(128,128,128,0.1)', border: '1px solid rgba(128,128,128,0.3)', borderRadius: 4, color: 'inherit' }}
+                                className="orbit-input" style={{ width: 70, padding: '4px 8px' }}
                             /> items · ~{Math.round((Math.max(1, customCount) * SECONDS_PER_ITEM) / 60)} min
                         </div>
                     </button>
@@ -170,42 +164,42 @@ export default function ExamSetup({
 
                 <button
                     onClick={() => setShowCats(v => !v)}
-                    style={{ marginTop: 12, width: '100%', display: 'flex', justifyContent: 'space-between', padding: '10px 12px', background: 'rgba(128,128,128,0.1)', border: '1px solid rgba(128,128,128,0.2)', borderRadius: 8, color: 'inherit', cursor: 'pointer' }}
+                    aria-expanded={showCats} className="orbit-option" style={{ marginTop: 12, justifyContent: 'space-between' }}
                 >
-                    <span>{showCats ? '▼' : '▶'} Limit to categories</span>
-                    <span style={{ opacity: 0.7, fontSize: '0.85rem' }}>{selectedCats.length ? `${selectedCats.length} selected` : 'All categories'}</span>
+                    <span>Limit to categories</span>
+                    <span className="orbit-muted">{selectedCats.length ? `${selectedCats.length} selected` : 'All categories'}</span>
                 </button>
                 {showCats && (
                     <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 6, maxHeight: 220, overflowY: 'auto', padding: 4 }}>
                         {categories.map(c => {
                             const on = selectedCats.includes(c.name);
                             return (
-                                <button key={c.name} onClick={() => toggleCat(c.name)} style={{ padding: '4px 10px', borderRadius: 12, border: 'none', fontSize: '0.75rem', cursor: 'pointer', background: on ? '#059669' : 'rgba(128,128,128,0.2)', color: on ? 'white' : 'inherit' }}>
+                                <button key={c.name} onClick={() => toggleCat(c.name)} style={{ padding: '4px 10px', borderRadius: 12, border: 'none', fontSize: '0.75rem', cursor: 'pointer', background: on ? 'var(--orbit-good)' : 'rgba(128,128,128,0.2)', color: on ? 'white' : 'inherit' }}>
                                     {on ? '✓ ' : ''}{c.name} <span style={{ opacity: 0.6 }}>({c.count})</span>
                                 </button>
                             );
                         })}
                         {selectedCats.length > 0 && (
-                            <button onClick={() => setSelectedCats([])} style={{ padding: '4px 10px', borderRadius: 12, border: '1px solid rgba(239,68,68,0.5)', fontSize: '0.75rem', cursor: 'pointer', background: 'transparent', color: '#ef4444' }}>Clear</button>
+                            <button onClick={() => setSelectedCats([])} style={{ padding: '4px 10px', borderRadius: 12, border: '1px solid rgba(239,68,68,0.5)', fontSize: '0.75rem', cursor: 'pointer', background: 'transparent', color: 'var(--orbit-bad)' }}>Clear</button>
                         )}
                     </div>
                 )}
             </section>
 
-            <section style={{ ...card, marginBottom: '1.25rem', borderColor: 'rgba(16,185,129,0.5)', background: 'rgba(16,185,129,0.07)' }}>
+            <section style={{ ...card, marginBottom: '1.25rem', ...edge('var(--orbit-good)') }}>
                 <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                    <span style={{ fontSize: '1.2rem', lineHeight: 1, color: '#10b981' }}>✓</span>
+                    <span style={{ fontSize: '1.2rem', lineHeight: 1, color: 'var(--orbit-good)' }}>✓</span>
                     <div style={{ flex: 1 }}>
                         <strong>Weighted to the official NBEO blueprint, not the question bank</strong>
                         <p style={{ margin: '6px 0 0', fontSize: '0.88rem', opacity: 0.85, lineHeight: 1.5 }}>
                             Each content area gets the share of items NBEO publishes for the real Part I ABS (the midpoint of its official range),
                             so heavily stocked bank categories don&apos;t crowd out the rest. Source:{' '}
-                            <a href={BLUEPRINT_SOURCE.url} target="_blank" rel="noreferrer" style={{ color: '#3b82f6' }}>{BLUEPRINT_SOURCE.label}</a>.
+                            <a href={BLUEPRINT_SOURCE.url} target="_blank" rel="noreferrer" style={{ color: 'var(--orbit-accent)' }}>{BLUEPRINT_SOURCE.label}</a>.
                             {selectedCats.length > 0 && ' With categories limited, the selected areas keep their relative NBEO weights.'}
                         </p>
                         <button
                             onClick={() => setShowBlueprint(v => !v)}
-                            style={{ marginTop: 10, padding: 0, background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontSize: '0.88rem' }}
+                            style={{ marginTop: 10, padding: 0, background: 'none', border: 'none', color: 'var(--orbit-accent)', cursor: 'pointer', fontSize: '0.88rem' }}
                         >
                             {showBlueprint ? '▼ Hide' : '▶ Show'} how {count} items are split
                         </button>
@@ -285,12 +279,12 @@ export default function ExamSetup({
                 )}
             </section>
 
-            {error && <p style={{ color: '#ef4444', textAlign: 'center', fontWeight: 500 }}>{error}</p>}
+            {error && <p style={{ color: 'var(--orbit-bad)', textAlign: 'center', fontWeight: 500 }}>{error}</p>}
 
             <button
                 onClick={start}
                 disabled={busy}
-                style={{ width: '100%', padding: '16px', background: '#006daa', color: 'white', border: 'none', borderRadius: 8, cursor: busy ? 'wait' : 'pointer', fontWeight: 'bold', fontSize: '1rem' }}
+                className="orbit-btn orbit-btn--primary" style={{ width: '100%', padding: 16, cursor: busy ? 'wait' : 'pointer' }}
             >
                 {busy ? 'Building exam…' : `Begin ${label_} — ${count} items${timeLimitSec ? ` · ${formatClock(timeLimitSec)}` : ' · untimed'}`}
             </button>

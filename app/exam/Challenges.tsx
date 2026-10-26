@@ -5,6 +5,7 @@
 
 import React, { useState } from 'react';
 import { formatClock } from './examUtils';
+import { glassCard } from '@/utils/orbitStyles';
 
 export interface ChallengeEntry {
     name: string;
@@ -26,12 +27,8 @@ export interface Challenge {
     entries: ChallengeEntry[];
 }
 
-const card: React.CSSProperties = {
-    padding: '1rem 1.25rem',
-    border: '1px solid rgba(128,128,128,0.2)',
-    borderRadius: '12px',
-    background: 'rgba(128,128,128,0.05)',
-};
+// Orbit glass surface
+const card: React.CSSProperties = { ...glassCard, padding: '1rem 1.25rem' };
 
 const pct = (e: ChallengeEntry) => (e.total ? (e.correct / e.total) * 100 : 0);
 
@@ -47,7 +44,7 @@ export default function Challenges({ challenges, busy, onTake, onDelete }: {
 
     return (
         <section style={{ marginTop: '1.75rem', display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <h2 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>Challenges</h2>
+            <h2 className="orbit-h2">Challenges</h2>
             {shown.map(c => {
                 const mine = c.entries.find(e => e.me);
                 return (
@@ -64,7 +61,7 @@ export default function Challenges({ challenges, busy, onTake, onDelete }: {
                                     <span style={{ fontSize: '0.85rem' }}>You: <strong>{pct(mine).toFixed(0)}%</strong></span>
                                 ) : (
                                     <button onClick={() => onTake(c.id)} disabled={busy}
-                                        style={{ padding: '8px 14px', background: '#0070f3', color: 'white', border: 'none', borderRadius: 8, fontWeight: 'bold', cursor: 'pointer', fontSize: '0.85rem' }}>
+                                        className="orbit-btn orbit-btn--accent">
                                         {busy ? 'Opening…' : 'Take challenge'}
                                     </button>
                                 )}
@@ -78,7 +75,7 @@ export default function Challenges({ challenges, busy, onTake, onDelete }: {
                             <ol style={{ listStyle: 'none', padding: 0, margin: '10px 0 0', display: 'flex', flexDirection: 'column', gap: 4, fontSize: '0.88rem' }}>
                                 {c.entries.map((e, i) => (
                                     <li key={`${e.name}-${i}`} style={{ display: 'grid', gridTemplateColumns: '28px 1fr auto auto', gap: 10, alignItems: 'center', fontWeight: e.me ? 700 : 400 }}>
-                                        <span aria-label={`Rank ${i + 1}`} style={{ fontVariantNumeric: 'tabular-nums', opacity: i === 0 ? 1 : 0.7, color: i === 0 ? '#d97706' : undefined, fontWeight: 700 }}>{i + 1}.</span>
+                                        <span aria-label={`Rank ${i + 1}`} style={{ fontVariantNumeric: 'tabular-nums', opacity: i === 0 ? 1 : 0.7, color: i === 0 ? 'var(--orbit-warn)' : undefined, fontWeight: 700 }}>{i + 1}.</span>
                                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.name}{e.me ? ' (you)' : ''}</span>
                                         <span>{e.correct}/{e.total} ({pct(e).toFixed(0)}%)</span>
                                         <span style={{ opacity: 0.7, fontVariantNumeric: 'tabular-nums' }}>{formatClock(e.elapsed_sec)}</span>
@@ -92,7 +89,7 @@ export default function Challenges({ challenges, busy, onTake, onDelete }: {
                 );
             })}
             {challenges.length > 3 && (
-                <button onClick={() => setShowAll(s => !s)} style={{ alignSelf: 'flex-start', background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', padding: 0 }}>
+                <button onClick={() => setShowAll(s => !s)} style={{ alignSelf: 'flex-start', background: 'none', border: 'none', color: 'var(--orbit-accent)', cursor: 'pointer', padding: 0 }}>
                     {showAll ? 'Show fewer' : `Show all ${challenges.length}`}
                 </button>
             )}

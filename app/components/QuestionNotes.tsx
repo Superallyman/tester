@@ -47,14 +47,17 @@ export default function QuestionNotes({ value, onSave, showNote = true }: {
         timer.current = setTimeout(flush, SAVE_DELAY_MS);
     };
 
-    const link: React.CSSProperties = { background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'inherit', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: 4 };
+    const link: React.CSSProperties = {
+        background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 5,
+        fontSize: '0.62rem', fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', fontFamily: 'inherit',
+    };
 
     return (
         // Typing in the note must not trigger the quiz's keyboard shortcuts
         <div onKeyDown={e => e.stopPropagation()} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
                 <button type="button" aria-pressed={bookmarked} onClick={() => onSave({ bookmarked: !bookmarked }).catch(console.error)}
-                    style={{ ...link, opacity: bookmarked ? 1 : 0.6, color: bookmarked ? '#d97706' : 'inherit', fontWeight: bookmarked ? 600 : 400 }}>
+                    style={{ ...link, opacity: bookmarked ? 1 : 0.6, color: bookmarked ? 'var(--orbit-warn)' : 'inherit' }}>
                     {bookmarked ? <BookmarkCheck size={14} aria-hidden="true" /> : <Bookmark size={14} aria-hidden="true" />}
                     {bookmarked ? 'Bookmarked' : 'Bookmark'}
                 </button>
@@ -67,7 +70,8 @@ export default function QuestionNotes({ value, onSave, showNote = true }: {
             </div>
             {showNote && saved && !open && (
                 <button type="button" onClick={() => setOpen(true)}
-                    style={{ textAlign: 'left', whiteSpace: 'pre-wrap', fontSize: '0.85rem', padding: '8px 10px', borderRadius: 6, border: '1px solid rgba(217,119,6,0.3)', background: 'rgba(217,119,6,0.06)', color: 'inherit', cursor: 'text' }}>
+                    className="orbit-glass"
+                    style={{ textAlign: 'left', whiteSpace: 'pre-wrap', fontSize: '0.88rem', lineHeight: 1.55, padding: '9px 12px', borderRadius: 'var(--orbit-radius)', cursor: 'text', boxShadow: 'inset 3px 0 0 var(--orbit-warn), var(--orbit-glass-shadow)' }}>
                     {saved}
                 </button>
             )}
@@ -75,8 +79,8 @@ export default function QuestionNotes({ value, onSave, showNote = true }: {
                 <div>
                     <textarea value={draft} onChange={e => write(e.target.value)} onBlur={flush} rows={3} maxLength={5000} autoFocus aria-label="Your note on this question"
                         placeholder="Only you can see this. A mnemonic, why the answer is right, where you read about it…"
-                        style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid rgba(128,128,128,0.35)', background: 'transparent', color: 'inherit', fontSize: '0.85rem', fontFamily: 'inherit' }} />
-                    <div style={{ fontSize: '0.7rem', opacity: 0.6, minHeight: '1em' }} aria-live="polite">
+                        className="orbit-input" style={{ fontSize: '0.88rem' }} />
+                    <div className="orbit-muted" style={{ minHeight: '1em', marginTop: 4 }} aria-live="polite">
                         {status === 'saving' ? 'Saving…' : status === 'saved' ? 'Saved' : status === 'error' ? "Couldn't save. Check your connection." : ''}
                     </div>
                 </div>

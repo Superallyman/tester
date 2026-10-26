@@ -13,6 +13,7 @@ import { useNotes } from '../components/useNotes';
 import DifficultyLine from '../components/DifficultyLine';
 import { useDifficulty } from '../components/useDifficulty';
 import { Trash2 } from 'lucide-react';
+import { edge } from '@/utils/orbitStyles';
 
 interface HistoryItem {
     id: string;
@@ -157,11 +158,12 @@ export default function HistoryPage() {
 
 
     return (
-        <div style={{ maxWidth: '900px', margin: '0 auto', padding: '2rem', color: 'inherit' }}>
-            <h1 style={{ marginBottom: '1.5rem', fontWeight: 'bold' }}>History & Review</h1>
+        <div style={{ maxWidth: '900px', margin: '0 auto', padding: '2rem 1rem 4rem' }}>
+            <p className="orbit-label">History</p>
+            <h1 className="orbit-title" style={{ margin: '6px 0 1.5rem' }}>History &amp; Review</h1>
 
             {/* Filter Toolbar */}
-            <div style={{ background: 'rgba(128,128,128,0.05)', padding: '20px', borderRadius: '12px', marginBottom: '2rem', border: '1px solid rgba(128,128,128,0.2)', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '15px' }}>
+            <div className="orbit-card" style={{ marginBottom: '2rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14, position: 'relative', zIndex: 5 }}>
 
                 <div>
                     <FrostedSelect
@@ -304,12 +306,12 @@ export default function HistoryPage() {
             {/* List */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 {history.map((item) => (
-                    <div key={item.id} style={{ padding: '1.5rem', background: 'rgba(128,128,128,0.05)', borderRadius: '12px', borderLeft: `6px solid ${item.is_correct ? '#10b981' : '#ef4444'}`, borderTop: '1px solid rgba(128,128,128,0.1)', borderRight: '1px solid rgba(128,128,128,0.1)', borderBottom: '1px solid rgba(128,128,128,0.1)', position: 'relative' }}>
+                    <div key={item.id} className="orbit-card" style={{ padding: '1.4rem', position: 'relative', ...edge(item.is_correct ? 'var(--orbit-good)' : 'var(--orbit-bad)') }}>
 
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '15px' }}>
                             <div style={{ minWidth: 0 }}>
-                                <span style={{ background: 'rgba(128,128,128,0.15)', padding: '3px 10px', borderRadius: '6px', fontSize: '0.7rem', color: '#3b82f6', fontWeight: 'bold' }}>{item.questions.category}</span>
-                                <div style={{ fontSize: '0.75rem', opacity: 0.5, marginTop: '8px' }}>
+                                <span className="orbit-badge">{item.questions.category}</span>
+                                <div className="orbit-muted" style={{ marginTop: 8 }}>
                                     {new Date(item.attempted_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
                                 </div>
                             </div>
@@ -317,7 +319,7 @@ export default function HistoryPage() {
                             <div style={{ display: 'flex', gap: '15px', alignItems: 'center', flexWrap: 'wrap' }}>
                                 <div>
                                     <label style={{ display: 'block', fontSize: '0.6rem', opacity: 0.6, marginBottom: '4px', fontWeight: 'bold' }}>CONFIDENCE</label>
-                                    <span style={{ fontWeight: 'bold', color: '#3b82f6' }}>{item.user_rating != null ? `${item.user_rating}/4` : '—'}</span>
+                                    <span style={{ fontWeight: 'bold', color: 'var(--orbit-accent)' }}>{item.user_rating != null ? `${item.user_rating}/4` : '—'}</span>
                                 </div>
                                 <div>
                                     <label style={{ display: 'block', fontSize: '0.6rem', opacity: 0.6, marginBottom: '4px', fontWeight: 'bold' }}>SATISFACTION</label>
@@ -328,7 +330,7 @@ export default function HistoryPage() {
                                                 onClick={() => handleUpdateSatisfaction(item.id, num)}
                                                 style={{
                                                     width: '24px', height: '24px', borderRadius: '4px', border: 'none', cursor: 'pointer',
-                                                    background: item.satisfaction_rating === num ? '#0070f3' : 'rgba(128,128,128,0.2)',
+                                                    background: item.satisfaction_rating === num ? 'var(--orbit-accent)' : 'rgba(128,128,128,0.2)',
                                                     color: item.satisfaction_rating === num ? 'white' : 'inherit', fontSize: '0.7rem',
                                                     transition: 'all 0.2s'
                                                 }}
@@ -367,7 +369,7 @@ export default function HistoryPage() {
                             border: '1px solid rgba(128,128,128,0.1)',
                             whiteSpace: 'pre-wrap'
                         }}>
-                            <strong style={{ color: '#3b82f6', display: 'block', marginBottom: '8px', fontSize: '0.75rem', letterSpacing: '0.05em' }}>EXPLANATION:</strong>
+                            <strong style={{ color: 'var(--orbit-accent)', display: 'block', marginBottom: '8px', fontSize: '0.75rem', letterSpacing: '0.05em' }}>EXPLANATION:</strong>
                             {decodeHTML(item.questions.explanation)}
                         </div>
                         <div style={{ marginTop: '12px' }}><QuestionNotes value={notes[item.question_id]} onSave={patch => saveNote(item.question_id, patch)} /></div>
@@ -381,14 +383,14 @@ export default function HistoryPage() {
                 <button
                     onClick={() => fetchHistory(false)}
                     disabled={loading}
-                    style={{ width: '100%', marginTop: '2.5rem', padding: '16px', background: 'rgba(128,128,128,0.1)', border: '1px solid rgba(128,128,128,0.2)', borderRadius: '12px', color: '#3b82f6', cursor: 'pointer', fontWeight: 'bold' }}
+                    className="orbit-btn" style={{ width: '100%', marginTop: '2rem', padding: 15 }}
                 >
                     {loading ? "Loading results..." : "Load More Attempts"}
                 </button>
             )}
 
             {!hasMore && history.length > 0 && (
-                <div style={{ textAlign: 'center', marginTop: '3rem', opacity: 0.4, fontSize: '0.85rem' }}>
+                <div className="orbit-label" style={{ textAlign: 'center', marginTop: '3rem' }}>
                     End of review history
                 </div>
             )}

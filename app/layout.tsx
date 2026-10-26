@@ -2,6 +2,9 @@
 
 import type { Metadata } from "next";
 // import { Geist, Geist_Mono } from "next/font/google";
+import { Barlow } from "next/font/google";
+// The Orbit kit (also the source other apps copy); globals.css comes after it so the app's tweaks win
+import "./design/orbit/orbit.css";
 import "./globals.css";
 
 //components
@@ -24,6 +27,8 @@ import { ThemeProvider } from "@/components/ui/theme-provider";
 //   subsets: ["latin"],
 // });
 
+const barlow = Barlow({ subsets: ["latin"], weight: ["200", "300", "400", "500", "600", "700"], variable: "--font-barlow", display: "swap" });
+
 export const metadata: Metadata = {
   title: "Custom Tester 2.0",
   description: "When you live hardcore, you are hardcore",
@@ -36,8 +41,8 @@ export default async function RootLayout({
 }>) {
   const session = await getServerSession(authOptions);
   return (
-    <html lang="en">
-      <body>
+    <html lang="en" className={barlow.variable} suppressHydrationWarning>
+      <body className="orbit orbit-backdrop">
         <SessionProvider session={session}>
           <ThemeProvider
             attribute="class"

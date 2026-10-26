@@ -141,26 +141,21 @@ export default function SmartReview({ onQuestionsFound }: SmartReviewProps) {
         }
     };
 
+    // While loading: the same header and card grid as placeholders, so the customizer below doesn't jump
+    if (email && !presets) return <SmartReviewSkeleton />;
     if (!email || !presets || (presets.every(p => p.ids.length === 0) && !weakest)) return null;
 
-    const cardStyle = (color: string, disabled: boolean): React.CSSProperties => ({
-        textAlign: 'left',
-        padding: '12px 14px',
-        borderRadius: '10px',
-        border: '1px solid rgba(128,128,128,0.2)',
-        borderLeft: `4px solid ${color}`,
-        background: 'rgba(128,128,128,0.05)',
-        color: 'inherit',
-        cursor: disabled ? 'default' : 'pointer',
-        opacity: disabled ? 0.45 : 1,
+    const card = (color: string, disabled: boolean): React.CSSProperties => ({
+        height: CARD_HEIGHT, boxSizing: 'border-box', flexDirection: 'column', alignItems: 'stretch', justifyContent: 'flex-start', gap: 4, overflow: 'hidden',
+        boxShadow: disabled ? undefined : `inset 3px 0 0 ${color}, 0 0 14px color-mix(in srgb, ${color} 14%, transparent)`,
+        opacity: disabled ? 0.45 : 1, cursor: disabled ? 'default' : 'pointer',
     });
 
     return (
         <section style={{ marginBottom: '1.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
-                <h2 style={{ fontSize: '0.75rem', letterSpacing: '0.06em', opacity: 0.6, margin: 0, fontWeight: 600 }}>QUICK SMART REVIEW</h2>
-                <label style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ opacity: 0.7 }}>Questions per set</span>
+            <SmartReviewHeader>
+                <label className="orbit-row" style={{ gap: 8 }}>
+                    <span className="orbit-label">Questions per set</span>
                     <input
                         type="number"
                         min={1}
@@ -168,36 +163,74 @@ export default function SmartReview({ onQuestionsFound }: SmartReviewProps) {
                         value={sizeInput}
                         onChange={e => changeSize(e.target.value)}
                         onBlur={() => changeSize(String(setSize))}
-                        style={{ width: 64, padding: '4px 6px', borderRadius: 6, border: '1px solid rgba(128,128,128,0.4)', background: 'transparent', color: 'inherit', fontSize: '0.8rem' }}
+                        className="orbit-input"
+                        style={{ width: 72, padding: '5px 8px', fontSize: '0.85rem' }}
                     />
                 </label>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 8 }}>
+            </SmartReviewHeader>
+            <div style={GRID}>
                 {presets.map(p => (
                     <button
                         key={p.key}
                         disabled={p.ids.length === 0}
                         onClick={() => onQuestionsFound((p.ordered ? p.ids : shuffle(p.ids)).slice(0, setSize))}
-                        style={cardStyle(p.color, p.ids.length === 0)}
+                        className="orbit-option"
+                        style={card(p.color, p.ids.length === 0)}
                     >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 6 }}>
-                            <strong style={{ fontSize: '0.95rem' }}>{p.title}</strong>
-                            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: p.color }}>{p.ids.length}</span>
+                            <span style={TITLE} title={p.title}>{p.title}</span>
+                            <span style={{ fontSize: '1.3rem', fontWeight: 300, fontVariantNumeric: 'tabular-nums' }}>{p.ids.length}</span>
                         </div>
-                        <div style={{ fontSize: '0.75rem', opacity: 0.7, marginTop: 4 }}>{p.blurb}</div>
+                        <div className="orbit-muted" style={BLURB} title={p.blurb}>{p.blurb}</div>
                     </button>
                 ))}
                 {weakest && (
-                    <button onClick={startWeakest} disabled={loadingWeak} style={cardStyle('#a855f7', false)}>
+                    <button onClick={startWeakest} disabled={loadingWeak} className="orbit-option" style={card('#a855f7', false)}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 6 }}>
-                            <strong style={{ fontSize: '0.95rem' }}>{loadingWeak ? 'Loading…' : 'Weakest category'}</strong>
-                            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#a855f7' }}>{weakest.accuracy.toFixed(0)}%</span>
+                            <span style={TITLE}>{loadingWeak ? 'Loading…' : 'Weakest category'}</span>
+                            <span style={{ fontSize: '1.3rem', fontWeight: 300, fontVariantNumeric: 'tabular-nums' }}>{weakest.accuracy.toFixed(0)}%</span>
                         </div>
-                        <div style={{ fontSize: '0.75rem', opacity: 0.7, marginTop: 4 }}>{weakest.category}: questions you haven&apos;t mastered</div>
+                        <div className="orbit-muted" style={BLURB} title={weakest.category}>{weakest.category}: questions you haven&apos;t mastered</div>
                     </button>
                 )}
             </div>
-            <p style={{ fontSize: '0.7rem', opacity: 0.5, margin: '6px 0 0' }}>Each set draws up to {setSize} random questions.</p>
+            <p className="orbit-muted" style={{ marginTop: 8, height: FOOTER_HEIGHT, lineHeight: `${FOOTER_HEIGHT}px` }}>Each set draws up to {setSize} random questions.</p>
+        </section>
+    );
+}
+
+// Fixed, so the skeleton and the loaded cards are exactly the same size: titles keep to one line, blurbs to two
+const CARD_HEIGHT = 96;
+const FOOTER_HEIGHT = 18;
+const TITLE: React.CSSProperties = { fontSize: '0.92rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 };
+const BLURB: React.CSSProperties = { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' };
+const GRID: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 8 };
+
+function SmartReviewHeader({ children }: { children?: React.ReactNode }) {
+    return (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap', minHeight: 34 }}>
+            <h2 className="orbit-label" style={{ margin: 0 }}>Quick Smart Review</h2>
+            {children}
+        </div>
+    );
+}
+
+// Six cards: due, still wrong, never right, fading, bookmarked, weakest category (the most there can be)
+function SmartReviewSkeleton() {
+    return (
+        <section aria-hidden="true" style={{ marginBottom: '1.5rem' }}>
+            {/* As wide as the real "Questions per set" control, so the header wraps at the same screen widths */}
+            <SmartReviewHeader><span className="orbit-skeleton" style={{ width: 212, height: 32 }} /></SmartReviewHeader>
+            <div style={GRID}>
+                {Array.from({ length: 6 }, (_, i) => (
+                    <div key={i} className="orbit-card" style={{ height: CARD_HEIGHT, boxSizing: 'border-box', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        <span className="orbit-skeleton" style={{ width: '70%', height: 14 }} />
+                        <span className="orbit-skeleton orbit-skeleton--text" style={{ width: '90%' }} />
+                        <span className="orbit-skeleton orbit-skeleton--text" style={{ width: '55%' }} />
+                    </div>
+                ))}
+            </div>
+            <div style={{ marginTop: 8, height: FOOTER_HEIGHT, display: 'flex', alignItems: 'center' }}><span className="orbit-skeleton orbit-skeleton--text" style={{ width: 220 }} /></div>
         </section>
     );
 }

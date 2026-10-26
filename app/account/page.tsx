@@ -53,10 +53,10 @@ export default function AccountPage() {
 
     return (
         <div className="mx-auto w-full max-w-md px-4 py-12">
-            <h1 className="mb-6 text-2xl font-bold">Account</h1>
+            <h1 className="orbit-title mb-6">Account</h1>
 
             {mustChange && (
-                <p className="mb-6 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm">
+                <p className="orbit-alert orbit-alert--warn mb-6">
                     You signed in with a temporary password. Choose your own to continue.
                 </p>
             )}
@@ -92,7 +92,7 @@ export default function AccountPage() {
                     <Input id="confirm" type="password" autoComplete="new-password" required value={confirm} onChange={e => setConfirm(e.target.value)} />
                 </div>
                 {message && (
-                    <p role="status" className={`rounded-md border px-3 py-2 text-sm ${message.ok ? "border-green-500/40 bg-green-500/10" : "border-red-500/40 bg-red-500/10"}`}>{message.text}</p>
+                    <p role="status" className={`orbit-alert ${message.ok ? "orbit-alert--good" : "orbit-alert--bad"}`}>{message.text}</p>
                 )}
                 <Button type="submit" disabled={busy || !info}>{busy ? "Saving…" : "Save password"}</Button>
             </form>

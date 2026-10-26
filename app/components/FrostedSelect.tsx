@@ -36,78 +36,22 @@ type Option<T> = {
   
     const selected = options.find(o => o.value === value);
   
-    const frostedStyle = {
-      background: "rgba(128,128,128,0.2)",
-      backdropFilter: "blur(8px)",
-      WebkitBackdropFilter: "blur(8px)",
-      border: "1px solid rgba(128,128,128,0.2)",
-      borderRadius: "8px"
-    };
-  
     return (
       <div style={{ position: "relative" }} ref={ref}>
-        <label
-          style={{
-            display: "block",
-            fontSize: "0.65rem",
-            opacity: 0.6,
-            marginBottom: "5px",
-            fontWeight: "bold"
-          }}
-        >
-          {label}
-        </label>
-  
-        <button
-          onClick={() => setOpen(prev => !prev)}
-          style={{
-            width: "100%",
-            padding: "10px",
-            textAlign: "left",
-            color: "inherit",
-            ...frostedStyle
-          }}
-        >
-          {selected?.label}
+        <span className="orbit-label" style={{ display: "block", marginBottom: 6 }}>{label}</span>
+        <button onClick={() => setOpen(prev => !prev)} aria-haspopup="listbox" aria-expanded={open}
+          className="orbit-input" style={{ textAlign: "left", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span>{selected?.label}</span><span aria-hidden="true" style={{ opacity: 0.5 }}>▾</span>
         </button>
-  
+
         {open && (
-          <div
-            style={{
-              position: "absolute",
-              top: "100%",
-              left: 0,
-              right: 0,
-              marginTop: "6px",
-              zIndex: 1000,
-              padding: "8px",
-              maxHeight: "220px",
-              overflowY: "auto",
-              boxShadow: "0 10px 25px rgba(0,0,0,0.4)",
-              ...frostedStyle
-            }}
-          >
+          <div role="listbox" className="orbit-glass"
+            style={{ position: "absolute", top: "100%", left: 0, right: 0, marginTop: 6, zIndex: 1000, padding: 6, maxHeight: 240, overflowY: "auto", borderRadius: "var(--orbit-radius)" }}>
             {options.map(option => (
-              <div
-                key={String(option.value)}
-                onClick={() => {
-                  onChange(option.value);
-                  setOpen(false);
-                }}
-                style={{
-                  padding: "8px",
-                  borderRadius: "6px",
-                  cursor: "pointer",
-                  fontSize: "0.85rem"
-                }}
-                onMouseEnter={e =>
-                  (e.currentTarget.style.background =
-                    "rgba(255,255,255,0.1)")
-                }
-                onMouseLeave={e =>
-                  (e.currentTarget.style.background = "transparent")
-                }
-              >
+              <div key={String(option.value)} role="option" aria-selected={option.value === value}
+                onClick={() => { onChange(option.value); setOpen(false); }}
+                className="hover:bg-black/5 dark:hover:bg-white/10"
+                style={{ padding: "8px 10px", borderRadius: "calc(var(--orbit-radius) - 2px)", cursor: "pointer", fontSize: "0.88rem", fontWeight: option.value === value ? 600 : 400 }}>
                 {option.label}
               </div>
             ))}

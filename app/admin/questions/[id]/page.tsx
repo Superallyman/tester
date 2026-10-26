@@ -53,8 +53,8 @@ const REASON_LABELS: Record<string, string> = {
 };
 
 const LETTERS = "ABCDEFGHIJKLMNOP";
-const card = "rounded-xl border border-black/10 dark:border-white/15 bg-black/[0.03] dark:bg-white/[0.04] p-4";
-const textarea = "w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring";
+const card = "orbit-card";
+const textarea = "orbit-input";
 
 interface Draft {
     category: string;
@@ -183,10 +183,10 @@ export default function QuestionEditorPage() {
                     </span>
                 )}
             </div>
-            <h1 className="text-2xl font-bold">{isNew ? "New question" : "Edit question"}</h1>
+            <h1 className="orbit-title">{isNew ? "New question" : "Edit question"}</h1>
 
             {detail && openReports > 0 && (
-                <section className="rounded-xl border border-red-500/40 bg-red-500/5 p-4">
+                <section className="orbit-card" style={{ boxShadow: "inset 3px 0 0 var(--orbit-bad), var(--orbit-glass-shadow)" }}>
                     <h2 className="mb-2 font-semibold">{openReports} open report{openReports === 1 ? "" : "s"}</h2>
                     <ReportList reports={detail.reports.filter(r => r.status === "open")} onSet={setReport} />
                 </section>
@@ -237,7 +237,7 @@ export default function QuestionEditorPage() {
                 </div>
 
                 {message && (
-                    <p role="status" className={`rounded-md border px-3 py-2 text-sm ${message.ok ? "border-green-500/40 bg-green-500/10" : "border-red-500/40 bg-red-500/10"}`}>{message.text}</p>
+                    <p role="status" className={`orbit-alert ${message.ok ? "orbit-alert--good" : "orbit-alert--bad"}`}>{message.text}</p>
                 )}
 
                 <div className="flex flex-wrap justify-end gap-2">

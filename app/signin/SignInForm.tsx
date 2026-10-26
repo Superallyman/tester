@@ -29,7 +29,7 @@ export default function SignInForm({ callbackUrl, initialError }: { callbackUrl:
     return (
         <div className="flex flex-col gap-6">
             {error && (
-                <p role="alert" className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm">{error}</p>
+                <p role="alert" className="orbit-alert orbit-alert--bad">{error}</p>
             )}
 
             <Button variant="outline" size="lg" onClick={() => signIn("github", { callbackUrl })}>

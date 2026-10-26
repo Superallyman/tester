@@ -5,6 +5,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { api, qs } from '@/utils/api';
+import { glassCard } from '@/utils/orbitStyles';
 
 interface Area {
     key: string; label: string; weight: number; answered: number; correct: number;
@@ -18,8 +19,9 @@ interface Analytics {
 }
 
 const TARGET = 70;
-const card: React.CSSProperties = { padding: '1.25rem', borderRadius: '12px', border: '1px solid rgba(128,128,128,0.25)', marginBottom: '2rem' };
-const muted: React.CSSProperties = { fontSize: '0.8rem', opacity: 0.7 };
+// Orbit glass surface
+const card: React.CSSProperties = { ...glassCard, marginBottom: '2rem' };
+const muted: React.CSSProperties = { fontSize: '0.8rem', color: 'var(--orbit-ink-soft)' };
 const pct = (c: number, n: number) => (n ? (c / n) * 100 : null);
 
 export default function Insights() {
@@ -45,10 +47,10 @@ function Readiness({ data }: { data: Analytics }) {
         .sort((a, b) => b.weight - a.weight);
     return (
         <section style={card} aria-labelledby="readiness-title">
-            <h3 id="readiness-title" style={{ margin: '0 0 0.75rem' }}>Exam readiness</h3>
+            <h3 id="readiness-title" className="orbit-h2" style={{ margin: '0 0 0.75rem' }}>Exam readiness</h3>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem 2rem', alignItems: 'center' }}>
                 <div>
-                    <div style={{ fontSize: '2.6rem', fontWeight: 700, lineHeight: 1 }}>{score === null ? '—' : `${score.toFixed(0)}%`}</div>
+                    <div className="orbit-stat" style={{ fontSize: '3rem' }}>{score === null ? '—' : `${score.toFixed(0)}%`}</div>
                     <div style={muted}>{score === null ? 'Not enough answers yet' : score >= TARGET ? `At or above the ${TARGET}% practice target` : `Practice target: ${TARGET}%`}</div>
                 </div>
                 <p style={{ ...muted, flex: '1 1 280px', margin: 0, lineHeight: 1.5 }}>
@@ -73,7 +75,7 @@ function AreaBars({ areas, min }: { areas: Area[]; min: number }) {
     const total = rows.reduce((s, a) => s + a.weight, 0) || 1;
     return (
         <section style={card} aria-labelledby="areas-title">
-            <h3 id="areas-title" style={{ margin: '0 0 0.25rem' }}>Accuracy by NBEO content area</h3>
+            <h3 id="areas-title" className="orbit-h2" style={{ margin: '0 0 0.25rem' }}>Accuracy by NBEO content area</h3>
             <p style={{ ...muted, margin: '0 0 1rem' }}>Largest share of the exam first. The dashed line is the {TARGET}% target; paler bars have fewer than {min} answers.</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {rows.map(a => {
@@ -151,7 +153,7 @@ function WeeklyTrend({ weeks }: { weeks: Week[] }) {
 
     return (
         <section style={card} aria-labelledby="trend-title">
-            <h3 id="trend-title" style={{ margin: '0 0 0.25rem' }}>Weekly accuracy</h3>
+            <h3 id="trend-title" className="orbit-h2" style={{ margin: '0 0 0.25rem' }}>Weekly accuracy</h3>
             <p style={{ ...muted, margin: '0 0 0.75rem' }}>Last 26 weeks. Hover or tap a week for its numbers.</p>
             <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', display: 'block' }} role="img"
                 aria-label={`Weekly accuracy over 26 weeks; latest week with answers: ${(() => { const l = [...points].reverse().find(p => p.p !== null); return l ? `${l.p!.toFixed(0)}% of ${l.s.answered}` : 'none'; })()}`}>

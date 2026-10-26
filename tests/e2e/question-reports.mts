@@ -77,7 +77,7 @@ try {
     ap.on('dialog', d => d.accept());
     await ap.goto(BASE + '/admin/questions', { waitUntil: 'networkidle' });
     await ap.waitForSelector('text=Which lens corrects myopia?', { timeout: 30000 });
-    check('Admin tab shows a report badge', (await ap.locator('nav[aria-label=Admin] span.bg-red-500').count()) === 1);
+    check('Admin tab shows a report badge', (await ap.locator('nav[aria-label=Admin] .orbit-badge--bad').count()) === 1);
     await ap.getByText('Which lens corrects myopia?').click();
     await ap.waitForSelector('text=Should be Minus.', { timeout: 30000 });
     await ap.waitForTimeout(800);

@@ -76,7 +76,8 @@ Other tokens: `--orbit-accent-ink`, `--orbit-good`, `--orbit-bad`, `--orbit-warn
 | `orbit-option` (`aria-checked`/`aria-pressed`/`.is-selected`, `.is-right`, `.is-wrong`, `.is-missed`) | Selectable rows, quiz answers |
 | `orbit-badge` (`--good`, `--bad`), `orbit-alert` (`--good`, `--bad`, `--warn`) | Status |
 | `orbit-progress` (+ `--good`) with a `<span style="width: 60%">` inside | Progress |
-| `orbit-nav` with `aria-current="page"` on the active link | Navigation bar |
+| `orbit-nav` with `aria-current="page"` on the active link (`--bare`: links only, inside a glass header) | Navigation bar |
+| `orbit-skeleton` (+ `--text`) with a width/height | Loading placeholder, sized like what it stands in for |
 | `orbit-row` `orbit-stack` `orbit-divider` | Layout helpers |
 | `orbit-backdrop` | The horizon / starfield background behind the glass |
 

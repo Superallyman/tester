@@ -5,8 +5,10 @@
 @tailwind utilities;
 
 
-body {
-  font-family: Arial, Helvetica, sans-serif;
+/* The app is styled with the Orbit kit (app/design/orbit/orbit.css): <body class="orbit orbit-backdrop">.
+   Barlow comes from next/font in layout.tsx under a generated name, so point Orbit at it. */
+.orbit {
+  --orbit-font: var(--font-barlow), "Barlow", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
 
@@ -68,7 +70,4 @@ body {
   }
 }
 
-/* Nav styles — layout and link colors live in components/Navbar.tsx */
-nav {
-  @apply mx-auto max-w-5xl mb-6;
-}
+

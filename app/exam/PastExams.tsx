@@ -6,15 +6,12 @@
 import React, { useMemo, useState } from 'react';
 import { formatClock } from './examUtils';
 import { FinishedExam } from './examSync';
+import { glassCard } from '@/utils/orbitStyles';
 
-const card: React.CSSProperties = {
-    padding: '1.25rem',
-    border: '1px solid rgba(128,128,128,0.2)',
-    borderRadius: '12px',
-    background: 'rgba(128,128,128,0.05)',
-};
+// Orbit glass surface
+const card: React.CSSProperties = glassCard;
 
-const scoreColor = (pct: number) => (pct >= 70 ? '#10b981' : pct >= 55 ? '#f59e0b' : '#ef4444');
+const scoreColor = (pct: number) => (pct >= 70 ? 'var(--orbit-good)' : pct >= 55 ? 'var(--orbit-warn)' : 'var(--orbit-bad)');
 const pctOf = (e: FinishedExam) => (e.total ? (e.correct / e.total) * 100 : 0);
 
 // Score per exam, oldest to newest. The axis fits the scores (in 10% steps) so progress isn't flattened.
@@ -36,7 +33,7 @@ function Trend({ exams }: { exams: FinishedExam[] }) {
                     <text x={LEFT - 6} y={y(g) + 3} textAnchor="end" fontSize="10" fill="currentColor" opacity={g === 70 ? 0.8 : 0.5}>{g}%</text>
                 </g>
             ))}
-            <polyline points={exams.map((e, i) => `${x(i)},${y(pctOf(e))}`).join(' ')} fill="none" stroke="#3b82f6" strokeWidth={2} />
+            <polyline points={exams.map((e, i) => `${x(i)},${y(pctOf(e))}`).join(' ')} fill="none" strokeWidth={2} style={{ stroke: "var(--orbit-accent)" }} />
             {exams.map((e, i) => (
                 <circle key={e.id} cx={x(i)} cy={y(pctOf(e))} r={4} fill={scoreColor(pctOf(e))}>
                     <title>{`${new Date(e.finished_at).toLocaleDateString()} · ${e.label} · ${pctOf(e).toFixed(0)}%`}</title>
@@ -80,7 +77,7 @@ export default function PastExams({ history, onReview, onDelete }: {
 
     return (
         <section style={{ marginTop: '1.75rem', display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <h2 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>Your past exams</h2>
+            <h2 className="orbit-h2">Your past exams</h2>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10 }}>
                 {[
@@ -104,7 +101,7 @@ export default function PastExams({ history, onReview, onDelete }: {
                     {stats!.weakest.map(w => (
                         <div key={w.name} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: '0.85rem', marginBottom: 6 }}>
                             <span style={{ flex: '0 0 45%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={w.name}>{w.name}</span>
-                            <span style={{ flex: 1, height: 8, background: 'rgba(128,128,128,0.2)', borderRadius: 4, overflow: 'hidden' }}>
+                            <span className="orbit-progress" style={{ flex: 1 }}>
                                 <span style={{ display: 'block', height: '100%', width: `${w.pct}%`, background: scoreColor(w.pct) }} />
                             </span>
                             <span style={{ width: 70, textAlign: 'right', opacity: 0.8 }}>{w.pct.toFixed(0)}% <span style={{ opacity: 0.6 }}>/{w.total}</span></span>
@@ -136,7 +133,7 @@ export default function PastExams({ history, onReview, onDelete }: {
                                         {h.has_detail ? (
                                             <button
                                                 onClick={async () => { setOpening(h.id); await onReview(h.id); setOpening(null); }}
-                                                style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontSize: '0.85rem' }}
+                                                style={{ background: 'none', border: 'none', color: 'var(--orbit-accent)', cursor: 'pointer', fontSize: '0.85rem' }}
                                             >
                                                 {opening === h.id ? 'Opening…' : 'Review'}
                                             </button>

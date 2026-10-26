@@ -6,13 +6,13 @@ import { MIN_PEOPLE, difficultyOf } from '@/utils/difficulty';
 import { DifficultyStat } from './useDifficulty';
 
 const LABELS = { easy: 'Easy', medium: 'Medium', hard: 'Hard' } as const;
-const COLORS = { easy: '#10b981', medium: '#d97706', hard: '#ef4444' } as const;
+const COLORS = { easy: 'var(--orbit-good)', medium: 'var(--orbit-warn)', hard: 'var(--orbit-bad)' } as const;
 
 export default function DifficultyLine({ stat }: { stat: DifficultyStat | undefined }) {
     const people = stat?.people ?? 0;
     const level = stat ? difficultyOf(stat.people, stat.first_correct) : null;
     return (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.75rem', opacity: 0.85 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.75rem', color: 'var(--orbit-ink-soft)' }}>
             <Users size={13} aria-hidden="true" />
             {level && <strong style={{ color: COLORS[level] }}>{LABELS[level]}</strong>}
             <span style={{ opacity: 0.8 }}>

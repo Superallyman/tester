@@ -13,7 +13,7 @@ export default async function SignInPage({ searchParams }: { searchParams: Promi
     const next = callbackUrl?.startsWith("/") && !callbackUrl.startsWith("//") ? callbackUrl : "/";
     return (
         <div className="mx-auto w-full max-w-sm px-4 py-12">
-            <h1 className="mb-6 text-2xl font-bold">Sign in</h1>
+            <h1 className="orbit-title mb-6">Sign in</h1>
             <SignInForm callbackUrl={next} initialError={error ? ERRORS[error] ?? "Sign-in failed. Please try again." : null} />
         </div>
     );

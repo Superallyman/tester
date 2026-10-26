@@ -1,4 +1,4 @@
-// Navbar.tsx
+// Navbar.tsx — the frosted top bar (Orbit kit classes)
 
 "use client";
 
@@ -17,29 +17,31 @@ import { signIn, signOut, useSession } from "next-auth/react";
 const LINKS = [
   { href: "/", label: "Quick Test" },
   { href: "/exam", label: "Practice Exam" },
-  { href: "/data", label: "Performance Analytics" },
+  { href: "/data", label: "Analytics" },
   { href: "/history", label: "History" },
   { href: "/leaderboard", label: "Leaderboard" },
 ];
+
+const small: React.CSSProperties = { fontSize: "0.62rem", fontWeight: 600, letterSpacing: "0.2em", textTransform: "uppercase", textDecoration: "none", color: "inherit" };
 
 function AuthButton() {
   const { data: session } = useSession(); // go and get the session
 
   if (session) {
     return (
-      <div className="flex flex-col items-start md:items-end text-sm leading-tight">
-        <Link href="/account" className="font-medium hover:underline">{session?.user?.name}</Link>
+      <div className="flex flex-col items-start md:items-end gap-1 leading-tight">
+        <Link href="/account" className="hover:underline" style={{ fontSize: "0.85rem", fontWeight: 500, color: "inherit", textDecoration: "none" }}>{session?.user?.name}</Link>
         <span className="flex gap-3">
-          {session.user?.isAdmin && <Link href="/admin/questions" className="opacity-70 hover:opacity-100 hover:underline">Admin</Link>}
-          <button onClick={() => signOut({ callbackUrl: "/signin" })} className="opacity-70 hover:opacity-100 hover:underline">Sign out</button>
+          {session.user?.isAdmin && <Link href="/admin/questions" style={{ ...small, opacity: 0.6 }} className="hover:!opacity-100">Admin</Link>}
+          <button onClick={() => signOut({ callbackUrl: "/signin" })} style={{ ...small, opacity: 0.6, background: "none", border: "none", padding: 0, cursor: "pointer" }} className="hover:!opacity-100">Sign out</button>
         </span>
       </div>
     );
   }
   return (
-    <div className="flex flex-col items-start md:items-end text-sm leading-tight">
-      <span className="opacity-70">Not signed in</span>
-      <button onClick={() => signIn()} className="font-medium text-blue-500 hover:underline">Sign in</button>
+    <div className="flex flex-col items-start md:items-end gap-1 leading-tight">
+      <span className="orbit-muted">Not signed in</span>
+      <button onClick={() => signIn()} className="orbit-btn orbit-btn--ghost">Sign in</button>
     </div>
   );
 }
@@ -57,33 +59,21 @@ export default function Navbar() {
   const visibleLinks = LINKS.filter(link => link.href !== "/leaderboard" || session?.user?.canSeeLeaderboard !== false);
 
   const links = visibleLinks.map(link => (
-    <Link
-      key={link.href}
-      href={link.href}
-      aria-current={isActive(link.href) ? "page" : undefined}
-      className={`rounded-md px-3 py-2 text-sm transition-colors ${
-        isActive(link.href)
-          ? "bg-black/5 dark:bg-white/10 font-semibold"
-          : "text-gray-500 hover:text-black dark:text-gray-400 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5"
-      }`}
-    >
+    <Link key={link.href} href={link.href} aria-current={isActive(link.href) ? "page" : undefined}>
       {link.label}
     </Link>
   ));
 
   return (
-    <nav className="w-full border-b-2 border-gray-200 dark:border-white/10">
-      <div className="flex items-center justify-between gap-4 px-4 md:px-6 py-3">
-        <Link href="/" className="shrink-0">
-          <Image
-            src={Logo}
-            alt="logo"
-            width={72}
-            className="dark:invert"
-          />
+    <nav className="orbit-glass sticky top-0 z-40 w-full" style={{ borderRadius: 0, borderLeft: "none", borderRight: "none", borderTop: "none" }}>
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 md:px-6 py-3">
+        <Link href="/" className="shrink-0 flex items-center gap-3" style={{ color: "inherit", textDecoration: "none" }}>
+          <Image src={Logo} alt="" width={40} className="dark:invert" />
+          <span className="hidden sm:inline" style={{ fontSize: "0.8rem", fontWeight: 500, letterSpacing: "0.28em", textTransform: "uppercase" }}>Tester</span>
         </Link>
 
-        <div className="hidden md:flex items-center gap-1">{links}</div>
+        {/* The wrapper does the hiding: .orbit-nav sets its own display, which would beat Tailwind's "hidden" */}
+        <div className="hidden md:block"><div className="orbit-nav orbit-nav--bare" style={{ gap: 22 }}>{links}</div></div>
 
         <div className="hidden md:flex items-center gap-4">
           <AuthButton />
@@ -96,7 +86,7 @@ export default function Navbar() {
             onClick={() => setOpen(o => !o)}
             aria-expanded={open}
             aria-label={open ? "Close menu" : "Open menu"}
-            className="rounded-md border border-black/15 dark:border-white/15 p-2"
+            className="orbit-btn orbit-btn--icon"
           >
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
@@ -104,9 +94,9 @@ export default function Navbar() {
       </div>
 
       {open && (
-        <div className="md:hidden flex flex-col gap-1 px-4 pb-4">
-          {links}
-          <div className="mt-2 border-t border-black/10 dark:border-white/10 pt-3 px-3">
+        <div className="md:hidden px-4 pb-4">
+          <div className="orbit-nav orbit-nav--bare flex-col !items-start" style={{ gap: 14 }}>{links}</div>
+          <div className="mt-3 pt-3" style={{ borderTop: "1px solid var(--orbit-track)" }}>
             <AuthButton />
           </div>
         </div>

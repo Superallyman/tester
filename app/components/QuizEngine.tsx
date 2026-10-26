@@ -255,21 +255,12 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
     }, [questions, active, hasSubmitted, isSubmitting, ratings, satisfaction, userSelections, goTo, rate]);
 
     const RatingPicker = ({ current, onSelect, label }: RatingPickerProps) => (
-        <div style={{ marginTop: '15px' }}>
-            <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '8px' }}>{label}</label>
-            <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ marginTop: 16 }}>
+            <span className="orbit-label" style={{ display: 'block', marginBottom: 8 }}>{label}</span>
+            <div style={{ display: 'flex', gap: 8 }} role="group" aria-label={label}>
                 {[1, 2, 3, 4].map(num => (
-                    <button
-                        key={num}
-                        onClick={() => onSelect(current === num ? undefined : num)}
-                        style={{
-                            flex: 1, padding: '8px', borderRadius: '6px',
-                            border: current === num ? '1px solid #0070f3' : '1px solid rgba(128,128,128,0.4)',
-                            cursor: 'pointer',
-                            background: current === num ? '#0070f3' : 'transparent',
-                            transition: 'all 0.2s', fontSize: '0.8rem', color: current === num ? 'white' : 'inherit'
-                        }}
-                    >
+                    <button key={num} aria-pressed={current === num} onClick={() => onSelect(current === num ? undefined : num)}
+                        className="orbit-option" style={{ flex: 1, justifyContent: 'center', padding: '9px 0', fontWeight: 600 }}>
                         {num}
                     </button>
                 ))}
@@ -278,108 +269,94 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
     );
 
     return (
-        <div style={{ color: 'inherit' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '1rem' }}>
-                <div role="group" aria-label="Show questions" style={{ display: 'flex', border: '1px solid rgba(128,128,128,0.3)', borderRadius: '8px', overflow: 'hidden', fontSize: '0.8rem' }}>
+        <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: '1rem' }}>
+                <div className="orbit-segment" role="group" aria-label="Show questions">
                     {([['all', 'All at once'], ['one', 'One at a time']] as [QuizMode, string][]).map(([m, text]) => (
-                        <button key={m} aria-pressed={mode === m} onClick={() => changeMode(m)}
-                            style={{ padding: '6px 12px', border: 'none', cursor: 'pointer', color: mode === m ? 'white' : 'inherit', background: mode === m ? '#0070f3' : 'transparent' }}>
-                            {text}
-                        </button>
+                        <button key={m} aria-pressed={mode === m} onClick={() => changeMode(m)}>{text}</button>
                     ))}
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                    <button onClick={() => setShowHelp(h => !h)} aria-expanded={showHelp}
-                        style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontSize: '0.8rem', padding: 0 }}>
-                        ⌨ Shortcuts
-                    </button>
-                    <span style={{ fontWeight: 'bold', opacity: 0.8, display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Timer size={16} aria-hidden="true" /> {formatTime(seconds)}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                    <button onClick={() => setShowHelp(h => !h)} aria-expanded={showHelp} className="orbit-btn orbit-btn--ghost">Shortcuts</button>
+                    <span style={{ fontWeight: 300, fontSize: '1.15rem', display: 'inline-flex', alignItems: 'center', gap: 6, fontVariantNumeric: 'tabular-nums' }}>
+                        <Timer size={16} aria-hidden="true" style={{ opacity: 0.6 }} /> {formatTime(seconds)}
+                    </span>
                 </div>
             </div>
 
             {showHelp && (
-                <div style={{ marginBottom: '1rem', padding: '12px 16px', borderRadius: '10px', border: '1px solid rgba(128,128,128,0.25)', background: 'rgba(128,128,128,0.05)', fontSize: '0.85rem' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '6px 16px' }}>
+                <div className="orbit-card" style={{ marginBottom: '1rem', fontSize: '0.85rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '8px 18px' }}>
                         {SHORTCUTS.map(([k, what]) => (
                             <React.Fragment key={k}>
-                                <kbd style={{ fontFamily: 'inherit', fontWeight: 'bold', whiteSpace: 'nowrap' }}>{k}</kbd><span style={{ opacity: 0.8 }}>{what}</span>
+                                <kbd className="orbit-label" style={{ color: 'inherit', whiteSpace: 'nowrap', fontFamily: 'inherit' }}>{k}</kbd><span className="orbit-body" style={{ fontSize: '0.85rem' }}>{what}</span>
                             </React.Fragment>
                         ))}
                     </div>
-                    <p style={{ margin: '8px 0 0', opacity: 0.6, fontSize: '0.75rem' }}>Keys act on the outlined question. Click a question to choose it. An answer is saved to your history once it has a rating.</p>
+                    <p className="orbit-muted" style={{ marginTop: 10 }}>Keys act on the outlined question. Click a question to choose it. An answer is saved to your history once it has a rating.</p>
                 </div>
             )}
 
             {hasSubmitted && (
-                <div style={{ padding: '1.5rem', borderRadius: '12px', border: '2px solid #0070f3', marginBottom: '2rem', textAlign: 'center', background: 'rgba(128,128,128,0.05)' }}>
-                    <h2 style={{ margin: 0 }}>Quiz Complete!</h2>
-                    <p style={{ fontSize: '1.1rem', margin: '10px 0' }}>
-                        You scored <strong>{score}</strong>/<strong>{questions.length}</strong> ({percentage.toFixed(1)}%)
-                    </p>
-                    <div style={{ background: 'rgba(128,128,128,0.2)', height: '8px', borderRadius: '10px', overflow: 'hidden' }}>
-                        <div style={{ background: '#0070f3', height: '100%', width: `${percentage}%`, transition: 'width 1s' }} />
+                <div className="orbit-card" style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '12px 28px', flexWrap: 'wrap' }}>
+                    <div>
+                        <h2 className="orbit-label" style={{ margin: 0 }}>Quiz Complete!</h2>
+                        <div className="orbit-stat" style={{ marginTop: 8 }}>{percentage.toFixed(0)}%</div>
+                    </div>
+                    <div style={{ flex: '1 1 220px' }}>
+                        <p className="orbit-body">You scored <strong>{score}</strong>/<strong>{questions.length}</strong> ({percentage.toFixed(1)}%)</p>
+                        <div className={`orbit-progress ${percentage >= 70 ? 'orbit-progress--good' : ''}`} style={{ marginTop: 10 }}>
+                            <span style={{ width: `${percentage}%`, transition: 'width 1s' }} />
+                        </div>
                     </div>
                 </div>
             )}
 
             {(mode === 'one' ? questions.slice(active, active + 1) : questions).map((q, i) => {
                 const idx = mode === 'one' ? active : i;
-                const isActive = idx === active && questions.length > 1;
+                const isActive = idx === active && questions.length > 1 && mode === 'all';
                 const isTracked = hasSubmitted ? !!activityIds[q.id] : ratings[q.id] !== undefined;
                 const selected = userSelections[q.id] || [];
                 const isCorrect = selected.length === q.correct_answers.length && selected.every(val => q.correct_answers.includes(val));
                 const multi = q.correct_answers.length > 1;
 
                 return (
-                    <div key={q.id} ref={el => { cardRefs.current[idx] = el; }} onMouseDown={() => setActive(idx)}
+                    <div key={q.id} ref={el => { cardRefs.current[idx] = el; }} onMouseDown={() => setActive(idx)} className="orbit-card"
                         style={{
-                            marginBottom: mode === 'one' ? '1rem' : '2rem', padding: '1.5rem', background: 'rgba(128,128,128,0.05)', borderRadius: '12px', position: 'relative',
-                            border: isActive && mode === 'all' ? '1px solid #0070f3' : '1px solid rgba(128,128,128,0.2)',
-                            boxShadow: isActive && mode === 'all' ? '0 0 0 1px #0070f3' : 'none', scrollMarginTop: '12px',
+                            marginBottom: mode === 'one' ? '1rem' : '1.5rem', padding: '1.4rem', scrollMarginTop: '80px',
+                            ...(isActive ? { borderColor: 'color-mix(in srgb, var(--orbit-accent) 70%, transparent)', boxShadow: 'inset 0 1px 0 var(--orbit-glass-edge), 0 0 22px color-mix(in srgb, var(--orbit-accent) 22%, transparent)' } : {}),
                         }}>
                         {hasSubmitted && (
                             <div style={{ marginBottom: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px 12px' }}>
-                                <span style={{ fontSize: '0.85rem', fontWeight: 'bold', letterSpacing: '0.04em', color: isCorrect ? '#10b981' : '#ef4444' }}>
-                                    {isCorrect ? 'CORRECT' : 'INCORRECT'}
+                                <span className="orbit-label" style={{ color: isCorrect ? 'var(--orbit-good)' : 'var(--orbit-bad)' }}>
+                                    {isCorrect ? 'Correct' : 'Incorrect'}
                                 </span>
                                 <DifficultyLine stat={difficulty[q.id]} />
                             </div>
                         )}
 
-                        <h3 style={{ marginTop: 0, lineHeight: 1.4 }}>{idx + 1}. {q.question_text}</h3>
+                        <h3 style={{ marginTop: 0, marginBottom: 6, lineHeight: 1.45, fontSize: '1.08rem', fontWeight: 500 }}>
+                            <span style={{ opacity: 0.45, fontWeight: 300, marginRight: 8 }}>{idx + 1}.</span>{q.question_text}
+                        </h3>
                         {multi && (
-                            <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#3b82f6' }}>
+                            <div className="orbit-label" style={{ color: 'var(--orbit-accent)', opacity: 1 }}>
                                 Select {q.correct_answers.length}
-                                {!hasSubmitted && <span style={{ fontWeight: 'normal', opacity: 0.8 }}> · {selected.length} chosen</span>}
+                                {!hasSubmitted && <span style={{ color: 'var(--orbit-ink-soft)' }}> · {selected.length} chosen</span>}
                             </div>
                         )}
 
                         <div role={hasSubmitted ? undefined : multi ? 'group' : 'radiogroup'} aria-label={`Answers for question ${idx + 1}`}
-                            style={{ display: 'grid', gap: '8px', marginTop: '15px' }}>
+                            style={{ display: 'grid', gap: 8, marginTop: 14 }}>
                             {q.options.map((opt, optIdx) => {
                                 const wasSelected = selected.includes(opt);
                                 const isOptCorrect = q.correct_answers.includes(opt);
 
                                 if (!hasSubmitted) {
                                     return (
-                                        <button
-                                            key={optIdx}
-                                            role={multi ? 'checkbox' : 'radio'}
-                                            aria-checked={wasSelected}
-                                            onClick={() => toggleOption(q.id, opt)}
-                                            style={{
-                                                padding: '12px',
-                                                textAlign: 'left',
-                                                borderRadius: '8px',
-                                                color: 'inherit',
-                                                cursor: 'pointer',
-                                                backgroundColor: wasSelected ? 'rgba(0,112,243,0.12)' : 'transparent',
-                                                border: wasSelected ? '1.5px solid #0070f3' : '1px solid rgba(128,128,128,0.4)',
-                                                display: 'flex', gap: '10px', alignItems: 'baseline',
-                                            }}
-                                        >
-                                            <span aria-hidden="true" style={{ flexShrink: 0, width: '1em', textAlign: 'center' }}>{multi ? (wasSelected ? '☑' : '☐') : (wasSelected ? '●' : '○')}</span>
-                                            <span style={{ fontWeight: 'bold', opacity: 0.6, flexShrink: 0 }}>{LETTERS[optIdx]}.</span>
+                                        <button key={optIdx} role={multi ? 'checkbox' : 'radio'} aria-checked={wasSelected}
+                                            onClick={() => toggleOption(q.id, opt)} className="orbit-option" style={{ alignItems: 'baseline' }}>
+                                            <span aria-hidden="true" style={{ flexShrink: 0, width: '1em', textAlign: 'center', opacity: wasSelected ? 1 : 0.5 }}>{multi ? (wasSelected ? '☑' : '☐') : (wasSelected ? '●' : '○')}</span>
+                                            <span className="orbit-label" style={{ flexShrink: 0, color: 'inherit' }}>{LETTERS[optIdx]}.</span>
                                             <span>{opt}</span>
                                         </button>
                                     );
@@ -390,18 +367,8 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
                         </div>
 
                         {hasSubmitted && (
-                            <div style={{ marginTop: '20px', borderTop: '1px solid rgba(128,128,128,0.2)', paddingTop: '15px' }}>
-                                <div style={{
-                                    background: 'rgba(59, 130, 246, 0.1)',
-                                    padding: '12px',
-                                    borderRadius: '8px',
-                                    fontSize: '0.9rem',
-                                    marginBottom: '15px',
-                                    borderLeft: '4px solid #3b82f6',
-                                    whiteSpace: 'pre-wrap'
-                                }}>
-                                    <strong style={{ color: '#3b82f6' }}>Explanation:</strong> {q.explanation}
-                                </div>
+                            <div className="orbit-glass" style={{ marginTop: 18, padding: '12px 14px', borderRadius: 'var(--orbit-radius)', fontSize: '0.9rem', lineHeight: 1.6, whiteSpace: 'pre-wrap', boxShadow: 'inset 3px 0 0 var(--orbit-accent), var(--orbit-glass-shadow)' }}>
+                                <span className="orbit-label" style={{ display: 'block', marginBottom: 6 }}>Explanation:</span>{q.explanation}
                             </div>
                         )}
 
@@ -411,20 +378,18 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
                             onSelect={(val: number | undefined) => rate(q.id, val)}
                         />
 
-                        <div style={{ marginTop: '14px' }}>
+                        <div style={{ marginTop: 14 }}>
                             <QuestionNotes value={notes[q.id]} onSave={patch => saveNote(q.id, patch)} showNote={hasSubmitted} />
                         </div>
 
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginTop: '12px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginTop: 12 }}>
                             <ReportQuestion key={q.id} questionId={q.id} />
                             {hasSubmitted ? (
                                 isTracked
-                                    ? <span style={{ fontSize: '0.65rem', color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid #10b981', padding: '1px 6px', borderRadius: '3px' }}>✓ SAVED TO HISTORY</span>
-                                    : <span style={{ fontSize: '0.65rem', opacity: 0.6, border: '1px solid rgba(128,128,128,0.3)', padding: '1px 6px', borderRadius: '3px' }}>NOT SAVED · rate it to save</span>
+                                    ? <span className="orbit-badge orbit-badge--good">✓ Saved to history</span>
+                                    : <span className="orbit-badge" style={{ opacity: 0.7 }}>Not saved · rate it to save</span>
                             ) : (
-                                <span style={{ fontSize: '0.65rem', opacity: isTracked ? 0.8 : 0.5, border: '1px solid rgba(128,128,128,0.3)', padding: '1px 6px', borderRadius: '3px' }}>
-                                    {isTracked ? 'WILL BE SAVED' : 'RATE IT TO SAVE IT'}
-                                </span>
+                                <span className="orbit-badge" style={{ opacity: isTracked ? 0.9 : 0.55 }}>{isTracked ? 'Will be saved' : 'Rate it to save it'}</span>
                             )}
                         </div>
                     </div>
@@ -433,30 +398,24 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
 
             {mode === 'one' && questions.length > 1 && (
                 <div style={{ marginBottom: '1.5rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                        <button onClick={() => goTo(active - 1)} disabled={active === 0}
-                            style={{ padding: '10px 18px', borderRadius: '8px', border: '1px solid rgba(128,128,128,0.4)', background: 'transparent', color: 'inherit', cursor: 'pointer', opacity: active === 0 ? 0.4 : 1 }}>
-                            ← Previous
-                        </button>
-                        <span style={{ fontSize: '0.9rem', opacity: 0.8 }}>Question {active + 1} of {questions.length}</span>
-                        <button onClick={() => goTo(active + 1)} disabled={active === questions.length - 1}
-                            style={{ padding: '10px 18px', borderRadius: '8px', border: 'none', background: '#0070f3', color: 'white', cursor: 'pointer', opacity: active === questions.length - 1 ? 0.4 : 1 }}>
-                            Next →
-                        </button>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                        <button onClick={() => goTo(active - 1)} disabled={active === 0} className="orbit-btn">← Previous</button>
+                        <span className="orbit-label">Question {active + 1} of {questions.length}</span>
+                        <button onClick={() => goTo(active + 1)} disabled={active === questions.length - 1} className="orbit-btn orbit-btn--primary">Next →</button>
                     </div>
-                    <div aria-label="Jump to question" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', justifyContent: 'center' }}>
+                    <div aria-label="Jump to question" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center' }}>
                         {questions.map((q, i) => {
                             const answered = (userSelections[q.id] || []).length > 0;
                             const sel = userSelections[q.id] || [];
                             const right = hasSubmitted && sel.length === q.correct_answers.length && sel.every(v => q.correct_answers.includes(v));
-                            const bg = hasSubmitted ? (right ? '#10b981' : '#ef4444') : answered ? '#444' : 'transparent';
+                            const tone = hasSubmitted ? (right ? 'var(--orbit-good)' : 'var(--orbit-bad)') : answered ? 'var(--orbit-ink)' : null;
                             return (
                                 <button key={q.id} onClick={() => goTo(i)} aria-current={i === active ? 'step' : undefined}
-                                    aria-label={`Question ${i + 1}${answered ? ', answered' : ''}`}
+                                    aria-label={`Question ${i + 1}${answered ? ', answered' : ''}`} className="orbit-glass"
                                     style={{
-                                        width: '30px', height: '30px', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer',
-                                        border: i === active ? '2px solid #0070f3' : '1px solid rgba(128,128,128,0.4)',
-                                        background: bg, color: hasSubmitted || answered ? 'white' : 'inherit',
+                                        width: 32, height: 32, borderRadius: 'var(--orbit-radius)', fontSize: '0.75rem', cursor: 'pointer', fontVariantNumeric: 'tabular-nums',
+                                        borderColor: i === active ? 'var(--orbit-accent)' : tone ?? undefined,
+                                        boxShadow: i === active ? '0 0 12px color-mix(in srgb, var(--orbit-accent) 40%, transparent)' : tone ? `inset 0 -2px 0 ${tone}` : undefined,
                                     }}>
                                     {i + 1}
                                 </button>
@@ -467,7 +426,7 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
             )}
 
             <button onClick={hasSubmitted ? () => window.location.reload() : handleAllSubmit} disabled={isSubmitting}
-                style={{ width: '100%', padding: '15px', background: hasSubmitted ? '#10b981' : '#0070f3', color: 'white', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer', transition: 'filter 0.2s' }}>
+                className="orbit-btn orbit-btn--primary" style={{ width: '100%', padding: 15 }}>
                 {isSubmitting ? "Submitting..." : hasSubmitted ? "Take Another Quiz" : "Submit All Answers"}
             </button>
         </div>

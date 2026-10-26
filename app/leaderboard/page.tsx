@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { api, qs } from '@/utils/api';
 import { BLUEPRINT } from '@/app/exam/blueprint';
+import { edge, glassCard } from '@/utils/orbitStyles';
 import {
     MIN_ATTEMPTS_PER_CELL, MIN_ATTEMPTS_TO_RANK, ROW_LABELS, UserStats, Window, pct,
 } from './stats';
@@ -23,7 +24,8 @@ const WINDOWS: { key: Window; label: string }[] = [
     { key: '7', label: '7 days' },
 ];
 
-const MEDALS = ['🥇', '🥈', '🥉'];
+// Top three in the warm accent; plain numbers render the same everywhere, unlike medal emoji
+const PODIUM = ['#d4a72c', '#a8b2bd', '#b87333'];
 
 // Diverging heatmap: blue above the midpoint, red below, neutral at it. Text stays in ink colours.
 const MIDPOINT = 65;
@@ -32,25 +34,11 @@ const cellBackground = (acc: number) => {
     return acc >= MIDPOINT ? `rgba(42,120,214,${strength})` : `rgba(227,73,72,${strength})`;
 };
 
-const card: React.CSSProperties = {
-    padding: '1rem 1.25rem',
-    border: '1px solid rgba(128,128,128,0.2)',
-    borderRadius: '12px',
-    background: 'rgba(128,128,128,0.05)',
-};
+// Orbit glass surface
+const card: React.CSSProperties = { ...glassCard, padding: '1rem 1.25rem' };
 
 const sectionTitle: React.CSSProperties = { fontSize: '0.75rem', letterSpacing: '0.06em', opacity: 0.6, margin: '0 0 8px', fontWeight: 600 };
 
-const chip = (active: boolean): React.CSSProperties => ({
-    padding: '6px 12px',
-    borderRadius: 16,
-    border: `1px solid ${active ? '#0070f3' : 'rgba(128,128,128,0.3)'}`,
-    background: active ? 'rgba(0,112,243,0.15)' : 'transparent',
-    color: 'inherit',
-    fontSize: '0.82rem',
-    cursor: 'pointer',
-    whiteSpace: 'nowrap',
-});
 
 const fmtPct = (n: number | null) => (n === null ? '—' : `${n.toFixed(0)}%`);
 
@@ -140,26 +128,30 @@ export default function LeaderboardPage() {
 
     return (
         <main style={{ maxWidth: '980px', margin: '0 auto', padding: '1.5rem 1rem 3rem' }}>
-            <h1 style={{ margin: '0 0 6px', fontSize: '1.7rem', fontWeight: 700 }}>Leaderboard</h1>
-            <p style={{ opacity: 0.7, margin: '0 0 1.25rem', fontSize: '0.95rem' }}>
+            <p className="orbit-label">Leaderboard</p>
+            <h1 className="orbit-title" style={{ margin: '6px 0 8px' }}>Leaderboard</h1>
+            <p className="orbit-body" style={{ margin: '0 0 1.25rem', color: 'var(--orbit-ink-soft)' }}>
                 Everyone&apos;s numbers, side by side. Find who&apos;s strongest where, and pull each other up before boards.
             </p>
 
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', marginBottom: '1.25rem' }}>
-                {WINDOWS.map(w => <button key={w.key} onClick={() => setTimeWindow(w.key)} style={chip(timeWindow === w.key)}>{w.label}</button>)}
-                <span style={{ width: 1, height: 22, background: 'rgba(128,128,128,0.3)', margin: '0 6px' }} />
-                {SORTS.map(s => <button key={s.key} onClick={() => setSort(s.key)} style={chip(sort === s.key)}>{s.label}</button>)}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', marginBottom: '1.25rem' }}>
+                <div className="orbit-segment" role="group" aria-label="Time window">
+                    {WINDOWS.map(w => <button key={w.key} aria-pressed={timeWindow === w.key} onClick={() => setTimeWindow(w.key)}>{w.label}</button>)}
+                </div>
+                <div className="orbit-segment" role="group" aria-label="Rank by" style={{ flexWrap: 'wrap' }}>
+                    {SORTS.map(s => <button key={s.key} aria-pressed={sort === s.key} onClick={() => setSort(s.key)}>{s.label}</button>)}
+                </div>
             </div>
 
-            {error && <p style={{ color: '#ef4444' }}>{error}</p>}
+            {error && <p style={{ color: 'var(--orbit-bad)' }}>{error}</p>}
             {!windows && !error && <p style={{ opacity: 0.6 }}>Loading the leaderboard…</p>}
             {windows && users.length === 0 && <p style={{ opacity: 0.6 }}>No activity in this time window yet.</p>}
 
             {users.length > 0 && (
                 <>
                     {meStats && (
-                        <div style={{ ...card, marginBottom: '1.25rem', borderColor: 'rgba(0,112,243,0.4)', background: 'rgba(0,112,243,0.06)', fontSize: '0.92rem' }}>
-                            {myRank === 0 && <>👑 You&apos;re <strong>#1 in {sortDef.label.toLowerCase()}</strong>. Defend the title.</>}
+                        <div style={{ ...card, marginBottom: '1.25rem', fontSize: '0.92rem', ...edge('var(--orbit-accent)') }}>
+                            {myRank === 0 && <>You&apos;re <strong>#1 in {sortDef.label.toLowerCase()}</strong>. Defend the title.</>}
                             {rival && (
                                 <>
                                     You&apos;re <strong>#{myRank + 1}</strong> in {sortDef.label.toLowerCase()}.{' '}
@@ -197,7 +189,7 @@ export default function LeaderboardPage() {
                                         const isRanked = i < ranked.length;
                                         return (
                                             <tr key={u.key} style={{ borderTop: '1px solid rgba(128,128,128,0.15)', background: u.key === me ? 'rgba(0,112,243,0.06)' : undefined, opacity: isRanked ? 1 : 0.55 }}>
-                                                <td style={{ ...td, fontSize: '1.05rem' }}>{isRanked ? (MEDALS[i] || i + 1) : '–'}</td>
+                                                <td style={{ ...td, fontSize: '1.05rem', fontWeight: 300, fontVariantNumeric: 'tabular-nums', color: isRanked && i < 3 ? PODIUM[i] : undefined }}>{isRanked ? i + 1 : '–'}</td>
                                                 <td style={td}>
                                                     {nameCell(u)}
                                                     {!isRanked && <div style={{ fontSize: '0.7rem', opacity: 0.8 }}>needs {MIN_ATTEMPTS_TO_RANK - u.attempts} more to rank</div>}

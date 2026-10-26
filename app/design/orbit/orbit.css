@@ -259,6 +259,18 @@ body.orbit-backdrop { min-height: 100vh; }
 .orbit .orbit-nav a { color: inherit; text-decoration: none; opacity: 0.55; padding-bottom: 3px; }
 .orbit .orbit-nav a:hover { opacity: 0.85; }
 .orbit .orbit-nav a[aria-current="page"] { opacity: 1; border-bottom: 1px solid var(--orbit-accent); box-shadow: 0 6px 10px -8px var(--orbit-accent); }
+/* Links only, for a nav inside a bar that is already glass */
+.orbit .orbit-nav--bare { background: none; border: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; padding: 0; }
+
+/* ---------- Skeleton: a placeholder the size of what's loading (set its width/height) ---------- */
+.orbit .orbit-skeleton {
+    display: block; border-radius: var(--orbit-radius);
+    background: linear-gradient(90deg, var(--orbit-track) 0%, color-mix(in srgb, var(--orbit-track) 40%, transparent) 50%, var(--orbit-track) 100%);
+    background-size: 200% 100%;
+    animation: orbit-shimmer 1.4s ease-in-out infinite;
+}
+.orbit .orbit-skeleton--text { height: 0.8em; border-radius: 3px; }
+@keyframes orbit-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 
 /* ---------- Layout helpers ---------- */
 .orbit .orbit-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
@@ -267,4 +279,5 @@ body.orbit-backdrop { min-height: 100vh; }
 
 @media (prefers-reduced-motion: reduce) {
     .orbit *, .orbit *::after { transition: none !important; }
+    .orbit .orbit-skeleton { animation: none; }
 }

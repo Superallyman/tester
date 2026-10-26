@@ -23,15 +23,15 @@ export default function PracticePage() {
   }, []);
 
   return (
-    <main style={{ maxWidth: '800px', margin: '0 auto', padding: '2rem 1rem' }}>
+    <main style={{ maxWidth: '820px', margin: '0 auto', padding: '2rem 1rem 4rem' }}>
 
       {activeQuestionIds.length === 0 ? (
         <div>
           <DailyProgress />
           <SmartReview onQuestionsFound={(ids) => setActiveQuestionIds(ids)} />
-          <h2 style={{ fontSize: '0.75rem', letterSpacing: '0.06em', opacity: 0.6, fontWeight: 600, margin: '1.75rem 0 0.6rem' }}>TEST CUSTOMIZER</h2>
+          <h2 className="orbit-label" style={{ margin: '1.75rem 0 0.6rem' }}>Test Customizer</h2>
           <QuestionSelector onQuestionsFound={(ids) => setActiveQuestionIds(ids)} />
-          <p style={{ textAlign: 'center', opacity: 0.5, marginTop: '1.5rem' }}>
+          <p className="orbit-muted" style={{ textAlign: 'center', marginTop: '1.5rem' }}>
             Use the filters above to build a custom quiz.
           </p>
         </div>
