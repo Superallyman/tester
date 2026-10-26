@@ -4,6 +4,7 @@
 //   A · Current  – copied from today's pages (inline styles and the shadcn ui/ components, used unchanged)
 //   B · Glass    – Apple's Liquid Glass: translucent, blurred, specular edges, pill shapes
 //   C · Mission  – Tesla / SpaceX: monochrome, sharp, hairlines, thin type, tracked uppercase labels
+//   D · Orbit    – C's restraint made of B's material: frosted surfaces, tracked caps, light numerals, glow for state
 // Nothing outside app/design/ is changed or styled by this page.
 
 import React, { useState } from "react";
@@ -36,7 +37,7 @@ function Spec({ code, note, children }: { code: string; note?: string; children:
     );
 }
 
-function Section({ id, title, blurb, a, b, c }: { id: string; title: string; blurb: string; a: React.ReactNode; b: React.ReactNode; c: React.ReactNode }) {
+function Section({ id, title, blurb, a, b, c, d }: { id: string; title: string; blurb: string; a: React.ReactNode; b: React.ReactNode; c: React.ReactNode; d: React.ReactNode }) {
     return (
         <section id={id} className={s.section}>
             <div className={s.sectionHead}><h2>{title}</h2><p>{blurb}</p></div>
@@ -44,6 +45,7 @@ function Section({ id, title, blurb, a, b, c }: { id: string; title: string; blu
                 <div><div className={s.colHead}>A · CURRENT</div><div className={`${s.stage} ${s.stageA}`}>{a}</div></div>
                 <div><div className={s.colHead}>B · GLASS</div><div className={`${s.stage} ${s.stageB}`}>{b}</div></div>
                 <div><div className={s.colHead}>C · MISSION</div><div className={`${s.stage} ${s.stageC}`}>{c}</div></div>
+                <div><div className={s.colHead}>D · ORBIT · MISSION + GLASS</div><div className={`${s.stage} ${s.stageD}`}>{d}</div></div>
             </div>
         </section>
     );
@@ -90,8 +92,9 @@ export default function Showcase() {
         <main className={`${s.page} ${fontClass}`} style={pageVars}>
             <div className={s.intro}>
                 <h1>Design showcase</h1>
-                <p>Every styled piece of the app, as it is today (A) and in two directions: <strong>B · Glass</strong>, after Apple&apos;s
-                    Liquid Glass, and <strong>C · Mission</strong>, after Tesla and SpaceX. Nothing here changes the real pages.</p>
+                <p>Every styled piece of the app, as it is today (A) and in three directions: <strong>B · Glass</strong>, after Apple&apos;s
+                    Liquid Glass; <strong>C · Mission</strong>, after Tesla and SpaceX; and <strong>D · Orbit</strong>, Mission&apos;s restraint
+                    made of Glass. Nothing here changes the real pages.</p>
                 <p>Each specimen has a code. Mix and match, e.g. &ldquo;BTN-C1 buttons, IN-B1 inputs, F3 font, AC4 accent, radius 0.5&rdquo;.
                     Use the theme toggle in the navbar to see dark mode.</p>
             </div>
@@ -109,7 +112,7 @@ export default function Showcase() {
                     ))}
                     <span style={{ opacity: 0.7 }}>{accent.code}</span>
                 </span>
-                <label>Corners (B, C)
+                <label>Corners (B, C, D)
                     <input type="range" min={0} max={2} step={0.25} value={radius} onChange={e => setRadius(Number(e.target.value))} />
                     <span style={{ opacity: 0.7, width: 32 }}>×{radius}</span>
                 </label>
@@ -142,6 +145,14 @@ export default function Showcase() {
                     <Spec code="TYPE-C5"><p className={s.mLabel}>Question limit</p></Spec>
                     <Spec code="TYPE-C6"><span className={s.mStat}>74%</span></Spec>
                 </>}
+                d={<div className={s.fCard} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                    <Spec code="TYPE-D1"><h1 className={s.fTitle}>NBEO Part I Practice Exam</h1></Spec>
+                    <Spec code="TYPE-D2"><h2 className={s.fH2}>Your past exams</h2></Spec>
+                    <Spec code="TYPE-D3"><p className={s.fBody}>The photoreceptors receive their blood supply from the choroid.</p></Spec>
+                    <Spec code="TYPE-D4"><p className={s.fMuted}>Last attempted 3 days ago</p></Spec>
+                    <Spec code="TYPE-D5"><p className={s.fLabel}>Question limit</p></Spec>
+                    <Spec code="TYPE-D6"><span className={s.fStat}>74%</span></Spec>
+                </div>}
             />
 
             {/* ---------------- COLOUR ---------------- */}
@@ -154,6 +165,9 @@ export default function Showcase() {
                 </Spec>}
                 c={<Spec code="COL-C1" note="ink, paper, one accent">
                     <Swatches items={[["#171a20", "ink"], ["#ffffff", "paper"], ["#5c5e62", "secondary"], [accent.color, "accent"], ["#12a150", "correct"], ["#e31937", "wrong"]]} />
+                </Spec>}
+                d={<Spec code="COL-D1" note="ink and frost, colour only as glow">
+                    <Swatches items={[["#0f1722", "ink"], ["#f2f5f9", "starlight"], ["rgba(255,255,255,0.4)", "frost"], [accent.color, "accent glow"], ["#2fbf71", "correct"], ["#e5484d", "wrong"]]} />
                 </Spec>}
             />
 
@@ -212,6 +226,21 @@ export default function Showcase() {
                     </Spec>
                     <Spec code="BTN-C8"><div className={s.row}><span className={s.mChipOn}>Glaucoma</span><span className={s.mChipOff}>Optics</span><span className={s.mChip}>Neuro</span></div></Spec>
                 </>}
+                d={<>
+                    <Spec code="BTN-D1" note="ink / starlight"><div className={s.row}><button className={s.fBtnPrimary}>Generate Quiz</button></div></Spec>
+                    <Spec code="BTN-D1b" note="accent variant"><div className={s.row}><button className={s.fBtnAccent}>Generate Quiz</button></div></Spec>
+                    <Spec code="BTN-D2"><div className={s.row}><button className={s.fBtn}>Discard</button></div></Spec>
+                    <Spec code="BTN-D3"><button className={s.fBtnGhost}>Change goal</button></Spec>
+                    <Spec code="BTN-D4"><button className={s.fBtnDanger}>Send report</button></Spec>
+                    <Spec code="BTN-D5"><div className={s.row}><button className={s.fIconBtn} aria-label="Menu"><Menu size={18} /></button><button className={s.fIconBtn} aria-label="Bookmark"><Bookmark size={17} /></button></div></Spec>
+                    <Spec code="BTN-D6"><button className={`${s.fBtnPrimary} ${s.fDisabled}`} disabled>Building exam…</button></Spec>
+                    <Spec code="BTN-D7">
+                        <div className={s.fSegment} role="group">
+                            {(["all", "one"] as const).map(m => <button key={m} aria-pressed={segment === m} onClick={() => setSegment(m)}>{m === "all" ? "All at once" : "One at a time"}</button>)}
+                        </div>
+                    </Spec>
+                    <Spec code="BTN-D8"><div className={s.row}><span className={`${s.fChip} ${s.fChipOn}`}>Glaucoma</span><span className={`${s.fChip} ${s.fChipOff}`}>Optics</span><span className={s.fChip}>Neuro</span></div></Spec>
+                </>}
             />
 
             {/* ---------------- INPUTS ---------------- */}
@@ -236,6 +265,13 @@ export default function Showcase() {
                     <Spec code="IN-C3"><select className={s.mInput} defaultValue=""><option value="">Any difficulty</option><option>Hard</option></select></Spec>
                     <Spec code="IN-C4"><label className={s.row} style={{ fontSize: "0.85rem" }}><button role="switch" aria-checked={switchOn} onClick={() => setSwitchOn(v => !v)} className={s.mSwitch} aria-label="Exclude mastered" /> <span className={s.mLabel} style={{ color: "inherit" }}>Exclude mastered</span></label></Spec>
                     <Spec code="IN-C5"><textarea rows={2} className={s.mInput} placeholder="Only you can see this…" style={{ fontFamily: "inherit" }} /></Spec>
+                </>}
+                d={<>
+                    <Spec code="IN-D1"><div style={{ position: "relative" }}><Search size={15} style={{ position: "absolute", left: 12, top: 12, opacity: 0.5 }} /><input className={s.fInput} style={{ paddingLeft: 34 }} placeholder="Search questions" /></div></Spec>
+                    <Spec code="IN-D2"><p className={s.fLabel}>Question limit</p><input type="number" defaultValue={20} className={s.fInput} /></Spec>
+                    <Spec code="IN-D3"><select className={s.fInput} defaultValue=""><option value="">Any difficulty</option><option>Hard</option></select></Spec>
+                    <Spec code="IN-D4"><label className={s.row}><button role="switch" aria-checked={switchOn} onClick={() => setSwitchOn(v => !v)} className={s.fSwitch} aria-label="Exclude mastered" /> <span className={s.fLabel} style={{ opacity: 0.85 }}>Exclude mastered</span></label></Spec>
+                    <Spec code="IN-D5"><textarea rows={2} className={s.fInput} placeholder="Only you can see this…" style={{ fontFamily: "inherit" }} /></Spec>
                 </>}
             />
 
@@ -308,6 +344,30 @@ export default function Showcase() {
                     <Spec code="Q-C3">{ratingRow({ on: s.mBtnPrimary, off: s.mBtn })}</Spec>
                     <Spec code="Q-C4"><QuizFooter tone="c" /></Spec>
                 </>}
+                d={<>
+                    <Spec code="Q-D1">
+                        <div style={{ display: "grid", gap: 8 }}>
+                            {OPTIONS.slice(0, 3).map((o, i) => (
+                                <button key={o} onClick={() => setPicked(i)} className={`${s.fOption} ${picked === i ? s.fOptionSel : ""}`}>
+                                    <span className={s.fLabel} style={{ opacity: 0.8 }}>{"ABC"[i]}</span>{o}
+                                </button>
+                            ))}
+                        </div>
+                    </Spec>
+                    <Spec code="Q-D2">
+                        <div style={{ display: "grid", gap: 8 }}>
+                            {OPTIONS.map((o, i) => (
+                                <div key={o} className={`${s.fOption} ${STATES[i] === "wrong" ? s.fOptionWrong : STATES[i] === "missed" ? s.fOptionMissed : ""}`}>
+                                    <span className={s.fLabel} style={{ opacity: 0.8 }}>{"ABCD"[i]}</span><span style={{ flex: 1 }}>{o}</span>
+                                    {STATES[i] === "wrong" && <span className={s.fLabel} style={{ color: "#e5484d", opacity: 1 }}>Yours</span>}
+                                    {STATES[i] === "missed" && <span className={s.fLabel} style={{ color: "#2fbf71", opacity: 1 }}>Answer</span>}
+                                </div>
+                            ))}
+                        </div>
+                    </Spec>
+                    <Spec code="Q-D3">{ratingRow({ on: s.fBtnAccent, off: s.fBtn })}</Spec>
+                    <Spec code="Q-D4"><QuizFooter tone="d" /></Spec>
+                </>}
             />
 
             {/* ---------------- CARDS & STATUS ---------------- */}
@@ -357,6 +417,22 @@ export default function Showcase() {
                     <Spec code="CARD-C4"><div className={s.row}><span className={s.mBadge}>Admin</span><span className={s.mBadge} style={{ color: "#12a150" }}>Saved</span><span className={s.mBadge} style={{ background: "#e31937", color: "#fff", borderColor: "#e31937" }}>3</span></div></Spec>
                     <Spec code="CARD-C5"><div><div style={{ display: "flex", justifyContent: "space-between" }}><span className={s.mLabel}>Today</span><span className={s.mLabel}>12 / 20</span></div><div className={s.mTrack} style={{ marginTop: 8 }}><div className={s.mFill} style={{ width: "60%" }} /></div></div></Spec>
                 </>}
+                d={<>
+                    <Spec code="CARD-D1"><div className={s.fCard}><p className={s.fLabel}>Average</p><div className={s.fStat} style={{ marginTop: 8 }}>64%</div></div></Spec>
+                    <Spec code="CARD-D2">
+                        <div className={s.fCard}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}><span className={s.fH2} style={{ fontSize: "0.72rem" }}>Due for review</span><span className={s.fStat} style={{ fontSize: "1.7rem" }}>12</span></div>
+                            <p className={s.fMuted} style={{ marginTop: 6 }}>Spaced repetition: scheduled for today</p>
+                            <div className={s.fTrack} style={{ marginTop: 10 }}><div className={s.fFill} style={{ width: "35%", background: "#2fbf71", boxShadow: "0 0 10px #2fbf71" }} /></div>
+                        </div>
+                    </Spec>
+                    <Spec code="CARD-D3">
+                        <div className={s.fCard} style={{ padding: "10px 14px", fontSize: "0.85rem", boxShadow: "inset 3px 0 0 #e5484d" }}>Wrong email or password.</div>
+                        <div className={s.fCard} style={{ padding: "10px 14px", fontSize: "0.85rem", boxShadow: "inset 3px 0 0 #2fbf71" }}>Password changed.</div>
+                    </Spec>
+                    <Spec code="CARD-D4"><div className={s.row}><span className={s.fBadge}>Admin</span><span className={s.fBadge} style={{ color: "#2fbf71" }}>Saved</span><span className={s.fBadge} style={{ color: "#e5484d", boxShadow: "0 0 10px rgba(229,72,77,0.4)" }}>3</span></div></Spec>
+                    <Spec code="CARD-D5"><div><div style={{ display: "flex", justifyContent: "space-between" }}><span className={s.fLabel}>Today</span><span className={s.fLabel}>12 / 20</span></div><div className={s.fTrack} style={{ marginTop: 8 }}><div className={s.fFill} style={{ width: "60%" }} /></div></div></Spec>
+                </>}
             />
 
             {/* ---------------- NAVIGATION ---------------- */}
@@ -383,6 +459,10 @@ export default function Showcase() {
                 c={<>
                     <Spec code="NAV-C1"><nav className={s.mNav}>{["Quick Test", "Practice Exam", "History"].map((l, i) => <a key={l} href="#nav" aria-current={i === 0 ? "page" : undefined}>{l}</a>)}</nav></Spec>
                     <Spec code="NAV-C2"><nav className={s.mNav} style={{ borderBottom: "none" }}><a href="#nav">Users</a><a href="#nav" aria-current="page">Questions (2)</a></nav></Spec>
+                </>}
+                d={<>
+                    <Spec code="NAV-D1"><nav className={s.fNav}>{["Quick Test", "Practice Exam", "History"].map((l, i) => <a key={l} href="#nav" aria-current={i === 0 ? "page" : undefined}>{l}</a>)}</nav></Spec>
+                    <Spec code="NAV-D2"><div className={s.fSegment} role="tablist"><button aria-pressed={false}>Users</button><button aria-pressed>Questions · 2</button></div></Spec>
                 </>}
             />
         </main>
@@ -418,9 +498,9 @@ function MarkedA({ text, letter, state }: { text: string; letter: string; state:
     );
 }
 
-function QuizFooter({ tone }: { tone: "a" | "b" | "c" }) {
-    const text = tone === "c" ? s.mLabel : undefined;
-    const item: React.CSSProperties = { display: "inline-flex", alignItems: "center", gap: 4, fontSize: tone === "c" ? undefined : "0.75rem", opacity: 0.75 };
+function QuizFooter({ tone }: { tone: "a" | "b" | "c" | "d" }) {
+    const text = tone === "c" ? s.mLabel : tone === "d" ? s.fLabel : undefined;
+    const item: React.CSSProperties = { display: "inline-flex", alignItems: "center", gap: 4, fontSize: tone === "c" || tone === "d" ? undefined : "0.75rem", opacity: 0.75 };
     return (
         <div style={{ display: "flex", flexWrap: "wrap", gap: "8px 16px", alignItems: "center" }}>
             <span style={item} className={text}><Users size={13} /> Medium · 2 of 3 right first try</span>
