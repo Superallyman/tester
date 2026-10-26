@@ -1,11 +1,11 @@
 import type { Metadata } from 'next';
-import Showcase from './Showcase';
+import OrbitKit from './OrbitKit';
 
 export const metadata: Metadata = {
-    title: 'Design showcase · Custom Tester',
-    description: 'Every styled element in the app, today and in two proposed directions',
+    title: 'Orbit design kit',
+    description: 'A drop-in UI kit: glass surfaces, Mission-style type. Every component with copyable HTML.',
 };
 
 export default function DesignPage() {
-    return <Showcase />;
+    return <OrbitKit />;
 }

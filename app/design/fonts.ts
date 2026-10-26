@@ -1,4 +1,4 @@
-// Candidate typefaces for the design showcase. Loaded only on /design; nothing else in the app uses them.
+// Candidate typefaces for the design pages. Loaded only under /design; nothing else in the app uses them.
 import { Barlow, Inter, Space_Grotesk } from 'next/font/google';
 
 // Closest open stand-in for Apple's SF Pro

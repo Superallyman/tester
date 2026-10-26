@@ -91,7 +91,8 @@ export default function Showcase() {
     return (
         <main className={`${s.page} ${fontClass}`} style={pageVars}>
             <div className={s.intro}>
-                <h1>Design showcase</h1>
+                <p style={{ margin: "0 0 6px" }}><a href="/design" style={{ color: "inherit", opacity: 0.7 }}>← Orbit design kit</a></p>
+                <h1>Design directions</h1>
                 <p>Every styled piece of the app, as it is today (A) and in three directions: <strong>B · Glass</strong>, after Apple&apos;s
                     Liquid Glass; <strong>C · Mission</strong>, after Tesla and SpaceX; and <strong>D · Orbit</strong>, Mission&apos;s restraint
                     made of Glass. Nothing here changes the real pages.</p>

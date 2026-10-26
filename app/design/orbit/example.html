@@ -1,0 +1,43 @@
+<!doctype html>
+<!-- Orbit starter: open this file next to orbit.css in any browser. No build step, no framework. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Orbit starter</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@200;300;400;500;600&display=swap">
+  <link rel="stylesheet" href="orbit.css">
+  <style>
+    body { margin: 0; min-height: 100vh; }
+    main { max-width: 520px; margin: 0 auto; padding: 48px 16px; }
+  </style>
+</head>
+<!-- data-theme: leave out to follow a parent .dark class, or use light / dark / system -->
+<body class="orbit orbit-backdrop" data-theme="system">
+  <main class="orbit-stack">
+    <nav class="orbit-nav">
+      <a href="#" aria-current="page">Overview</a><a href="#">Reports</a><a href="#">Settings</a>
+    </nav>
+    <div class="orbit-card orbit-stack">
+      <p class="orbit-label">Workspace</p>
+      <h1 class="orbit-title">Northwind</h1>
+      <div class="orbit-row">
+        <div class="orbit-card" style="flex:1"><p class="orbit-label">Uptime</p><span class="orbit-stat">99.9%</span></div>
+        <div class="orbit-card" style="flex:1"><p class="orbit-label">Queue</p><span class="orbit-stat">12</span></div>
+      </div>
+      <label class="orbit-field"><span class="orbit-label">Email</span><input class="orbit-input" type="email" placeholder="you@company.com"></label>
+      <div class="orbit-row">
+        <button class="orbit-switch" role="switch" aria-checked="true" aria-label="Weekly digest"
+          onclick="this.setAttribute('aria-checked', this.getAttribute('aria-checked') !== 'true')"></button>
+        <span class="orbit-label">Weekly digest</span>
+      </div>
+      <div class="orbit-progress"><span style="width: 60%"></span></div>
+      <hr class="orbit-divider">
+      <div class="orbit-row">
+        <button class="orbit-btn orbit-btn--primary">Save changes</button>
+        <button class="orbit-btn">Cancel</button>
+      </div>
+    </div>
+  </main>
+</body>
+</html>
