@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { api, qs } from '@/utils/api';
 import { useSession } from "next-auth/react";
 
@@ -36,7 +36,7 @@ interface HistoryItem {
 const PAGE_SIZE = 100;
 
 // Define the specific types for our filters to avoid 'any'
-type StatusFilter = 'all' | 'correct' | 'incorrect';
+type StatusFilter = 'all' | 'correct' | 'incorrect' | 'skipped';
 type SortOrder = 'newest' | 'oldest' | 'confidence' | 'satisfaction';
 
 export default function HistoryPage() {
@@ -48,7 +48,6 @@ export default function HistoryPage() {
     const { notes, save: saveNote } = useNotes(historyQuestionIds);
     const difficulty = useDifficulty(historyQuestionIds);
     const [loading, setLoading] = useState(true);
-    const [page, setPage] = useState(0);
     const [hasMore, setHasMore] = useState(true);
 
     // Filter States
@@ -56,6 +55,39 @@ export default function HistoryPage() {
     const [satFilter, setSatFilter] = useState<number | 'all'>('all');
     const [sortOrder, setSortOrder] = useState<SortOrder>('newest');
     const [selectedCats, setSelectedCats] = useState<string[]>([]);
+    const [mastery, setMastery] = useState<'all' | 'mastered' | 'unmastered'>('all');
+    const [saved, setSaved] = useState<'all' | 'bookmarked' | 'notes'>('all');
+    const [difficultyFilter, setDifficultyFilter] = useState<'all' | 'easy' | 'medium' | 'hard'>('all');
+    const [confidence, setConfidence] = useState<number | 'all'>('all');
+    const [days, setDays] = useState<'all' | '7' | '30' | '90'>('all');
+    const [latestOnly, setLatestOnly] = useState(false);
+    const [searchInput, setSearchInput] = useState('');
+    const [search, setSearch] = useState('');
+    const [total, setTotal] = useState<number | null>(null);
+
+    // Search as you type, once typing pauses
+    useEffect(() => {
+        const t = setTimeout(() => setSearch(searchInput.trim()), 350);
+        return () => clearTimeout(t);
+    }, [searchInput]);
+
+    const filters = useMemo(() => ({
+        status: statusFilter === 'all' ? undefined : statusFilter,
+        sat: satFilter === 'all' ? undefined : satFilter,
+        confidence: confidence === 'all' ? undefined : confidence,
+        category: selectedCats,
+        mastery: mastery === 'all' ? undefined : mastery,
+        saved: saved === 'all' ? undefined : saved,
+        difficulty: difficultyFilter === 'all' ? undefined : difficultyFilter,
+        days: days === 'all' ? undefined : days,
+        q: search || undefined,
+        latest: latestOnly ? '1' : undefined,
+    }), [statusFilter, satFilter, confidence, selectedCats, mastery, saved, difficultyFilter, days, search, latestOnly]);
+    const activeFilters = Object.values(filters).filter(v => Array.isArray(v) ? v.length : v !== undefined).length;
+    const clearFilters = () => {
+        setStatusFilter('all'); setSatFilter('all'); setConfidence('all'); setSelectedCats([]); setMastery('all');
+        setSaved('all'); setDifficultyFilter('all'); setDays('all'); setLatestOnly(false); setSearchInput(''); setSearch('');
+    };
 
     // UI States
     const [availableCategories, setAvailableCategories] = useState<string[]>([]);
@@ -84,28 +116,31 @@ export default function HistoryPage() {
         getCategories();
     }, []);
 
-    // 2. Main Fetch Logic
-    // 2. Main Fetch Logic
+    // 2. Main Fetch Logic. The page lives in a ref so loading more doesn't re-run the fresh-search effect, and
+    // only the latest request may write, so a slow response can't overwrite newer filters
+    const email = session?.user?.email;
+    const pageRef = useRef(0);
+    const requestId = useRef(0);
     const fetchHistory = useCallback(async (isNewSearch: boolean) => {
-        if (!session?.user?.email) return;
+        if (!email) return;
+        const id = ++requestId.current;
         setLoading(true);
 
-        const start = isNewSearch ? 0 : page * PAGE_SIZE;
+        const start = isNewSearch ? 0 : pageRef.current * PAGE_SIZE;
 
         let data: unknown[] | null = null;
         let error: unknown = null;
         try {
-            data = await api<unknown[]>(`/api/activity/history${qs({
-                status: statusFilter === 'all' ? undefined : statusFilter,
-                sat: satFilter === 'all' ? undefined : satFilter,
-                category: selectedCats,
-                sort: sortOrder,
-                offset: start,
-                limit: PAGE_SIZE,
-            })}`);
+            const [rows, count] = await Promise.all([
+                api<unknown[]>(`/api/activity/history${qs({ ...filters, sort: sortOrder, offset: start, limit: PAGE_SIZE })}`),
+                isNewSearch ? api<{ total: number }>(`/api/activity/history${qs({ ...filters, count: '1' })}`) : Promise.resolve(null),
+            ]);
+            data = rows;
+            if (count) setTotal(count.total);
         } catch (err) {
             error = err;
         }
+        if (id !== requestId.current) return;
 
         if (error) {
             console.error(error);
@@ -130,14 +165,12 @@ export default function HistoryPage() {
             setHistory(prev => isNewSearch ? cleanedItems : [...prev, ...cleanedItems]);
             setHasMore(cleanedItems.length === PAGE_SIZE);
 
-            if (isNewSearch) setPage(1);
-            else setPage(prev => prev + 1);
+            pageRef.current = isNewSearch ? 1 : pageRef.current + 1;
         }
 
         setLoading(false);
-    }, [session, statusFilter, satFilter, sortOrder, selectedCats, page]);
+    }, [email, filters, sortOrder]);
 
-    // Fixed Warning: Added fetchHistory to dependencies
     useEffect(() => {
         fetchHistory(true);
     }, [fetchHistory]);
@@ -163,145 +196,64 @@ export default function HistoryPage() {
             <h1 className="orbit-title" style={{ margin: '6px 0 1.5rem' }}>History &amp; Review</h1>
 
             {/* Filter Toolbar */}
-            <div className="orbit-card" style={{ marginBottom: '2rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14, position: 'relative', zIndex: 5 }}>
+            <div className="orbit-card orbit-stack" style={{ marginBottom: '1.25rem', gap: 14, position: 'relative', zIndex: 5 }}>
+                <input className="orbit-input" type="search" value={searchInput} onChange={e => setSearchInput(e.target.value)}
+                    placeholder="Search your history: question, options or explanation" aria-label="Search history" />
+                <div className="grid grid-cols-2 md:grid-cols-3" style={{ gap: 12 }}>
+                    <FrostedSelect label="Result" value={statusFilter} onChange={val => setStatusFilter(val as StatusFilter)}
+                        options={[{ label: 'All results', value: 'all' }, { label: 'Correct', value: 'correct' }, { label: 'Incorrect', value: 'incorrect' }, { label: 'Skipped', value: 'skipped' }]} />
+                    <FrostedSelect label="Mastery" value={mastery} onChange={val => setMastery(val as typeof mastery)}
+                        options={[{ label: 'Any', value: 'all' }, { label: 'Mastered', value: 'mastered' }, { label: 'Not mastered', value: 'unmastered' }]} />
+                    <FrostedSelect label="Saved" value={saved} onChange={val => setSaved(val as typeof saved)}
+                        options={[{ label: 'Everything', value: 'all' }, { label: 'Bookmarked', value: 'bookmarked' }, { label: 'With a note', value: 'notes' }]} />
+                    <FrostedSelect label="Difficulty" value={difficultyFilter} onChange={val => setDifficultyFilter(val as typeof difficultyFilter)}
+                        options={[{ label: 'Any difficulty', value: 'all' }, { label: 'Easy', value: 'easy' }, { label: 'Medium', value: 'medium' }, { label: 'Hard', value: 'hard' }]} />
+                    <FrostedSelect label="Confidence" value={confidence} onChange={val => setConfidence(val === 'all' ? 'all' : Number(val))}
+                        options={[{ label: 'Any', value: 'all' }, { label: '1 - Guess', value: 1 }, { label: '2 - Unsure', value: 2 }, { label: '3 - Fairly sure', value: 3 }, { label: '4 - Certain', value: 4 }]} />
+                    <FrostedSelect label="Satisfaction" value={satFilter} onChange={(val) => setSatFilter(val === 'all' ? 'all' : Number(val))}
+                        options={[{ label: 'Any', value: 'all' }, { label: '1 - Poor', value: 1 }, { label: '2 - Fair', value: 2 }, { label: '3 - Good', value: 3 }, { label: '4 - Excellent', value: 4 }]} />
+                    <FrostedSelect label="Period" value={days} onChange={val => setDays(val as typeof days)}
+                        options={[{ label: 'All time', value: 'all' }, { label: 'Last 7 days', value: '7' }, { label: 'Last 30 days', value: '30' }, { label: 'Last 90 days', value: '90' }]} />
+                    <FrostedSelect label="Sort" value={sortOrder} onChange={(val) => setSortOrder(val as SortOrder)}
+                        options={[{ label: 'Newest', value: 'newest' }, { label: 'Oldest', value: 'oldest' }, { label: 'Confidence', value: 'confidence' }, { label: 'Satisfaction', value: 'satisfaction' }]} />
 
-                <div>
-                    <FrostedSelect
-                        label="SATISFACTION"
-                        value={satFilter}
-                        onChange={(val) => setSatFilter(val === 'all' ? 'all' : Number(val))}
-                        options={[
-                            { label: "All Scores", value: "all" },
-                            { label: "1 - Poor", value: 1 },
-                            { label: "2 - Fair", value: 2 },
-                            { label: "3 - Good", value: 3 },
-                            { label: "4 - Excellent", value: 4 }
-                        ]}
-                    />
+                    <div style={{ position: 'relative' }}>
+                        <span className="orbit-label" style={{ display: 'block', marginBottom: 6 }}>Category</span>
+                        <button onClick={() => setShowCatDropdown(!showCatDropdown)} aria-expanded={showCatDropdown} className="orbit-input"
+                            style={{ textAlign: 'left', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span>{selectedCats.length === 0 ? 'All categories' : `${selectedCats.length} selected`}</span><span aria-hidden="true" style={{ opacity: 0.5 }}>▾</span>
+                        </button>
+                        {showCatDropdown && (
+                            <div className="orbit-glass" style={{ position: 'absolute', top: '100%', left: 0, right: 0, minWidth: 260, marginTop: 6, zIndex: 1000, padding: 6, maxHeight: 360, overflowY: 'auto', borderRadius: 'var(--orbit-radius)' }}>
+                                {availableCategories.map((cat) => (
+                                    <label key={cat} className="hover:bg-black/5 dark:hover:bg-white/10"
+                                        style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: '0.88rem', cursor: 'pointer', padding: '8px 10px', borderRadius: 'calc(var(--orbit-radius) - 2px)' }}>
+                                        <input type="checkbox" checked={selectedCats.includes(cat)}
+                                            onChange={() => setSelectedCats(prev => prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat])} />
+                                        {cat}
+                                    </label>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </div>
-                <div>
-                    <FrostedSelect
-                        label="STATUS"
-                        value={statusFilter}
-                        onChange={(val) => setStatusFilter(val as StatusFilter)}
-                        options={[
-                            { label: "All Results", value: "all" },
-                            { label: "Correct", value: "correct" },
-                            { label: "Incorrect", value: "incorrect" }
-                        ]}
-                    />
-                </div>
-                <div>
-                    <FrostedSelect
-                        label="SORT ORDER"
-                        value={sortOrder}
-                        onChange={(val) => setSortOrder(val as SortOrder)}
-                        options={[
-                            { label: "Newest", value: "newest" },
-                            { label: "Oldest", value: "oldest" },
-                            { label: "Confidence", value: "confidence" },
-                            { label: "Satisfaction", value: "satisfaction" }
-                        ]}
-                    />
-                </div>
-
-                <div style={{ position: 'relative' }}>
-                    <label
-                        style={{
-                            display: 'block',
-                            fontSize: '0.65rem',
-                            opacity: 0.6,
-                            marginBottom: '5px',
-                            fontWeight: 'bold',
-                        }}
-                    >
-                        CATEGORY
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                    <label className="orbit-row orbit-body" style={{ gap: 10 }}>
+                        <button type="button" role="switch" aria-checked={latestOnly} onClick={() => setLatestOnly(v => !v)} className="orbit-switch" aria-label="Latest attempt per question only" />
+                        Latest attempt per question only
                     </label>
-                    <button
-                        onClick={() => setShowCatDropdown(!showCatDropdown)}
-                        style={{
-                            width: '100%',
-                            padding: '10px',
-                            textAlign: 'left',
-                            color: 'inherit',
-                            background: 'rgba(128,128,128,0.2)',
-                            backdropFilter: 'blur(8px)',
-                            WebkitBackdropFilter: 'blur(8px)',
-                            border: '1px solid rgba(128,128,128,0.2)',
-                            borderRadius: '8px',
-                        }}
-                    >
-                        {selectedCats.length === 0 ? 'All Categories' : `${selectedCats.length} selected`}
-                    </button>
-                    {showCatDropdown && (
-                        <div
-                            style={{
-                                position: 'absolute',
-                                top: '100%',
-                                left: 0,
-                                right: 0,
-                                marginTop: '6px',
-                                zIndex: 1000,
-                                padding: '8px',
-                                maxHeight: '500px',
-                                overflowY: 'auto',
-                                boxShadow: '0 10px 25px rgba(0,0,0,0.4)',
-                                background: 'rgba(128,128,128,0.2)',
-                                backdropFilter: 'blur(8px)',
-                                WebkitBackdropFilter: 'blur(8px)',
-                                border: '1px solid rgba(128,128,128,0.3)',
-                                borderRadius: '8px',
-                            }}
-                        >
-                            {availableCategories.map((cat) => (
-                                <label
-                                    key={cat}
-                                    style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        marginBottom: '5px',
-                                        fontSize: '0.875rem', // Slightly increased font size for clarity
-                                        cursor: 'pointer',
-                                        padding: '8px',
-                                        borderRadius: '6px',
-                                    }}
-                                    onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}
-                                    onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                                >
-                                    <input
-                                        type="checkbox"
-                                        checked={selectedCats.includes(cat)}
-                                        onChange={() =>
-                                            setSelectedCats((prev) =>
-                                                prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
-                                            )
-                                        }
-                                        style={{ marginRight: '10px' }}
-                                    />
-                                    {cat}
-                                </label>
-                            ))}
-                        </div>
-                    )}
+                    <span className="orbit-row" style={{ gap: 14 }}>
+                        <span className="orbit-label" aria-live="polite">{total === null ? '' : `${total} attempt${total === 1 ? '' : 's'}${activeFilters ? ' match' : ''}`}</span>
+                        {activeFilters > 0 && <button type="button" onClick={clearFilters} className="orbit-btn orbit-btn--ghost">Clear filters</button>}
+                    </span>
                 </div>
-
-                {/* <div style={{ position: 'relative' }}>
-                    <label style={{ display: 'block', fontSize: '0.65rem', opacity: 0.6, marginBottom: '5px', fontWeight: 'bold' }}>CATEGORY</label>
-                    <button onClick={() => setShowCatDropdown(!showCatDropdown)} style={{ width: '100%', padding: '10px', background: 'rgba(128,128,128,0.1)', color: 'inherit', border: '1px solid rgba(128,128,128,0.2)', borderRadius: '8px', textAlign: 'left' }}>
-                        {selectedCats.length === 0 ? "All Categories" : `${selectedCats.length} selected`}
-                    </button>
-                    {showCatDropdown && (
-                        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'rgba(128,128,128,0.2)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', color: 'inherit', border: '1px solid rgba(128,128,128,0.3)', borderRadius: '8px', zIndex: 10, padding: '10px', maxHeight: '250px', overflowY: 'auto', boxShadow: '0 10px 25px rgba(0,0,0,0.4)' }}>
-                            {availableCategories.map(cat => (
-                                <label key={cat} style={{ display: 'flex', alignItems: 'center', marginBottom: '8px', fontSize: '0.8rem', cursor: 'pointer' }}>
-                                    <input type="checkbox" checked={selectedCats.includes(cat)} onChange={() => setSelectedCats(prev => prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat])} style={{ marginRight: '10px' }} />
-                                    {cat}
-                                </label>
-                            ))}
-                        </div>
-                    )}
-                </div> */}
             </div>
+
+            {!loading && history.length === 0 && (
+                <p className="orbit-muted" style={{ textAlign: 'center', padding: '2.5rem 0' }}>
+                    {activeFilters ? 'No attempts match these filters.' : 'No attempts yet. Answer some questions in Quick Test and they show up here.'}
+                </p>
+            )}
 
             {/* List */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>

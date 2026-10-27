@@ -3,9 +3,11 @@
 
 import type { CSSProperties } from 'react';
 
+// Border as separate properties, not the "border" shorthand: callers override borderColor for a selected state,
+// and React warns (and can leave stale styles) when a shorthand and its longhand are mixed across re-renders
 export const glass: CSSProperties = {
     background: 'linear-gradient(180deg, var(--orbit-glass-top), var(--orbit-glass-bottom))',
-    border: '1px solid var(--orbit-glass-border)',
+    borderWidth: 1, borderStyle: 'solid', borderColor: 'var(--orbit-glass-border)',
     boxShadow: 'inset 0 1px 0 var(--orbit-glass-edge), var(--orbit-glass-shadow)',
     backdropFilter: 'blur(var(--orbit-blur)) saturate(140%)',
     WebkitBackdropFilter: 'blur(var(--orbit-blur)) saturate(140%)',

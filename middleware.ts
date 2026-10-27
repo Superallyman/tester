@@ -18,7 +18,8 @@ export async function middleware(request: NextRequest) {
   });
 
   const path = request.nextUrl.pathname;
-  const isAdminPage = path.startsWith("/admin");
+  // Admin tools, plus the design kit showcase (/design, /design/compare, /design/orbit.css)
+  const isAdminPage = path.startsWith("/admin") || path === "/design" || path.startsWith("/design/");
   const gated = isAdminPage || path === "/" || path === "/api/questions" || path === "/account"
     || ["/exam", "/leaderboard", "/history", "/data"].some(p => path.startsWith(p));
   if (!gated) {
@@ -49,5 +50,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/exam/:path*", "/leaderboard/:path*", "/history/:path*", "/data/:path*", "/account", "/admin/:path*", "/api/:path*"],
+  matcher: ["/", "/exam/:path*", "/leaderboard/:path*", "/history/:path*", "/data/:path*", "/account", "/admin/:path*", "/design/:path*", "/api/:path*"],
 };

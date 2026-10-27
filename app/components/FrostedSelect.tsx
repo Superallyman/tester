@@ -39,7 +39,7 @@ type Option<T> = {
     return (
       <div style={{ position: "relative" }} ref={ref}>
         <span className="orbit-label" style={{ display: "block", marginBottom: 6 }}>{label}</span>
-        <button onClick={() => setOpen(prev => !prev)} aria-haspopup="listbox" aria-expanded={open}
+        <button onClick={() => setOpen(prev => !prev)} aria-haspopup="listbox" aria-expanded={open} aria-label={`${label}: ${selected?.label ?? ""}`}
           className="orbit-input" style={{ textAlign: "left", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span>{selected?.label}</span><span aria-hidden="true" style={{ opacity: 0.5 }}>▾</span>
         </button>
