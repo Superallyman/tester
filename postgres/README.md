@@ -43,11 +43,18 @@ Chromium; on optotester-dev `tests/run.sh` loads the unpacked system libraries f
 Production still runs on Supabase and keeps adding rows. When it moves, run these steps in order on its new
 database:
 
-1. Start the database and apply the schema: `docker compose up -d db`, then `npm run db:migrate`.
+1. Start only the database: `docker compose up -d db`. It gets the base schema; don't run migrations yet.
 2. Copy every row from Supabase: `./postgres/sync-from-supabase.sh`.
 3. Check the copy: `./postgres/verify-against-supabase.sh` must print MATCH for every table.
 4. Clean the data: `postgres/cutover/2026-10-data-cleanup.sql`. It removes the February 2026 test rows and the
-   "anonymous" rows, and renames the unused duplicate questions table to `questions_archive`. It's safe to run twice.
+   "anonymous" rows, renames the unused duplicate questions table to `questions_archive`, and converts the old 1-10
+   confidence ratings to 1-4. It's safe to run twice.
+5. Apply the migrations: `npm run db:migrate`, or start the app container (`docker compose up -d`), which runs them
+   first. They come last because `002` creates an account for every email in the history, and `003`'s 1-4 rating
+   check needs step 4.
+
+The sync and verify scripts use `pg_dump` / `psql` from the host when installed, and otherwise run them in the
+`postgres:17-alpine` image.
 
 The dev database got step 4 on 2026-10-23, so it no longer matches Supabase and must not be synced again.
 

@@ -1,11 +1,13 @@
 -- Data cleanup, approved by the owner on 2026-10-23 and applied to the dev database that day.
 -- Kept for production: production still runs on Supabase and keeps adding rows, so run this there too, as the last
 -- step of moving it to Postgres:
---   1. fresh database, schema and migrations (docker compose up -d db; npm run db:migrate)
+--   1. fresh database with only the base schema (docker compose up -d db; no migrations yet)
 --   2. ./postgres/sync-from-supabase.sh       copy every row
 --   3. ./postgres/verify-against-supabase.sh  must print MATCH for every table
 --   4. this script:  docker exec -i optotester-db psql -U optotester -d optotester -v ON_ERROR_STOP=1 < postgres/cutover/2026-10-data-cleanup.sql
--- (Step 3 compares against Supabase, so run it before this script changes anything.)
+--   5. migrations (npm run db:migrate, or start the app container, which runs them first)
+-- (Step 3 compares against Supabase, so run it before this script changes anything. Migrations come last:
+-- 002 creates an account for every email in the copied history, and 003's 1-4 rating check needs part 4 below.)
 -- Safe to run more than once: each part only touches rows or tables that still need it, and prints what it changed.
 -- Numbers below are from the dev copy on 2026-10-23; production's will be similar or larger.
 
@@ -34,3 +36,27 @@ begin
     end if;
 end $$;
 comment on table questions_archive is 'Original full import. Holds the live bank plus 358 questions (Schwartz, Peds, Alberta Star) that were never in it.';
+
+-- 4. Confidence (user_rating) was rated 1-10 until 2026-02-27 20:00 UTC; convert those ratings to the 1-4 scale
+--    (1-3 -> 1, 4-5 -> 2, 6-7 -> 3, 8-10 -> 4), as on dev on 2026-10-23. updated_at is left as it was. Runs only
+--    while the old 1-10 check is in place, and swaps in the 1-4 check (what migration 003 does), so a second run
+--    can't convert a rating twice.
+do $$
+declare n int;
+begin
+    if exists (select 1 from pg_constraint where conname = 'user_activity_user_rating_check'
+               and pg_get_constraintdef(oid) like '%<= 10%') then
+        alter table user_activity disable trigger update_user_activity_modtime;
+        update user_activity set user_rating = case
+                when user_rating <= 3 then 1
+                when user_rating <= 5 then 2
+                when user_rating <= 7 then 3
+                else 4 end
+        where attempted_at < '2026-02-27 20:00Z' and user_rating is not null;
+        get diagnostics n = row_count;
+        alter table user_activity drop constraint user_activity_user_rating_check;
+        alter table user_activity add constraint user_activity_user_rating_check check (user_rating >= 1 and user_rating <= 4);
+        alter table user_activity enable trigger update_user_activity_modtime;
+        raise notice 'converted % confidence ratings from 1-10 to 1-4', n;
+    end if;
+end $$;

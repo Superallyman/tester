@@ -9,6 +9,7 @@ let failed = 0;
 const check = (label: string, ok: boolean, extra = '') => { console.log(`${ok ? 'PASS' : 'FAIL'}  ${label}${extra ? '  — ' + extra : ''}`); if (!ok) failed++; };
 const cleanup = async () => {
     await query(`delete from challenges where title like 'E2E %'`);
+    await query('delete from user_activity where user_email in ($1, $2, $3)', [A, B, C]);
     await query('delete from app_users where email in ($1, $2, $3)', [A, B, C]);
 };
 
