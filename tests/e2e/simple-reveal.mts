@@ -64,7 +64,15 @@ try {
     await page.evaluate(() => localStorage.setItem('quiz_mode', 'all'));
     await page.reload({ waitUntil: 'networkidle' });
     await page.waitForTimeout(1500);
-    await page.locator('input[type=number]').last().fill('5');
+    // The question limit can be emptied while typing a new number, and an empty box goes back to the last number
+    const limitBox = page.locator('input[type=number]').last();
+    await limitBox.fill('5');
+    await limitBox.press('End'); await limitBox.press('Backspace');
+    check('Question limit can be emptied', await limitBox.inputValue() === '');
+    await limitBox.press('3'); await limitBox.press('Backspace');
+    await page.locator('h2', { hasText: 'Test Customizer' }).click();
+    check('Left empty, it goes back to the last number', await limitBox.inputValue() === '3');
+    await limitBox.fill('5');
     await page.getByText('Generate Quiz').click();
     await page.waitForSelector('h3', { timeout: 30000 });
     for (let i = 0; i < 5; i++) { await page.keyboard.press('a'); await page.keyboard.press('ArrowRight'); }

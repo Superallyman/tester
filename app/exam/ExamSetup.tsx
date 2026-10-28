@@ -38,6 +38,8 @@ export default function ExamSetup({
 }: ExamSetupProps) {
     const [preset, setPreset] = useState<string>('block');
     const [customCount, setCustomCount] = useState(25);
+    // What's typed, so the box can be emptied while typing a new number; the count only changes to a valid one
+    const [customInput, setCustomInput] = useState('25');
     const [timed, setTimed] = useState(true);
     const [filter, setFilter] = useState<PoolFilter>('all');
     const [saveToHistory, setSaveToHistory] = useState(true);
@@ -131,9 +133,10 @@ export default function ExamSetup({
                                 type="number"
                                 min={1}
                                 max={370}
-                                value={customCount}
+                                value={customInput}
                                 onClick={e => { e.stopPropagation(); setPreset('custom'); }}
-                                onChange={e => setCustomCount(parseInt(e.target.value) || 1)}
+                                onChange={e => { setCustomInput(e.target.value); const n = parseInt(e.target.value, 10); if (n >= 1) setCustomCount(n); }}
+                                onBlur={() => setCustomInput(String(customCount))}
                                 className="orbit-input" style={{ width: 70, padding: '4px 8px' }}
                             /> items · ~{Math.round((Math.max(1, customCount) * SECONDS_PER_ITEM) / 60)} min
                         </div>

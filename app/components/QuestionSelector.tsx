@@ -30,7 +30,9 @@ export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorP
     const [searchedPhrases, setSearchedPhrases] = useState<SearchChip[]>([]);
     const [searchMode, setSearchMode] = useState<'AND' | 'OR'>('OR');
     const [searchingPhrase, setSearchingPhrase] = useState(false);
-    const [limit, setLimit] = useState(1); //can we save the limit in local storage so it persists across sessions?
+    const [limit, setLimit] = useState(1); // remembered in localStorage
+    // What's typed, so the box can be emptied while typing a new number; the limit only changes to a valid one
+    const [limitInput, setLimitInput] = useState('1');
     const [unseenOnly, setUnseenOnly] = useState(false);
     const [bookmarkedOnly, setBookmarkedOnly] = useState(false);
     const [difficulty, setDifficulty] = useState<'' | 'easy' | 'medium' | 'hard'>('');
@@ -61,15 +63,18 @@ export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorP
             const parsed = parseInt(savedLimit, 10);
             if (!isNaN(parsed) && parsed > 0) {
                 setLimit(parsed);
+                setLimitInput(String(parsed));
             }
         }
     }, []);
 
     // 2. Handler to update state and localStorage simultaneously
-    const handleLimitChange = (val: number) => {
-        const newLimit = Math.max(1, val);
-        setLimit(newLimit);
-        localStorage.setItem('question_selector_limit', newLimit.toString());
+    const handleLimitChange = (text: string) => {
+        setLimitInput(text);
+        const n = parseInt(text, 10);
+        if (!(n >= 1)) return;
+        setLimit(n);
+        localStorage.setItem('question_selector_limit', n.toString());
     };
 
     useEffect(() => {
@@ -220,7 +225,7 @@ export default function QuestionSelector({ onQuestionsFound }: QuestionSelectorP
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 16, alignItems: 'end' }}>
                 <label className="orbit-field">
                     <span className="orbit-label">Question limit</span>
-                    <input type="number" min={1} value={limit} onChange={(e) => handleLimitChange(parseInt(e.target.value) || 1)} className="orbit-input" />
+                    <input type="number" min={1} value={limitInput} onChange={(e) => handleLimitChange(e.target.value)} onBlur={() => setLimitInput(String(limit))} className="orbit-input" />
                 </label>
                 <div className="orbit-row" style={{ gap: '10px 18px', paddingBottom: 8 }}>
                     <label className="orbit-row orbit-body" style={{ gap: 6, opacity: unseenOnly ? 1 : 0.75 }}>
