@@ -37,7 +37,7 @@ const card = "orbit-card";
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 
 export default function AdminUsersPage() {
-    const { data: session } = useSession();
+    const { data: session, update } = useSession();
     const [users, setUsers] = useState<User[]>([]);
     const [orphans, setOrphans] = useState<Orphan[]>([]);
     const [error, setError] = useState<string | null>(null);
@@ -73,7 +73,12 @@ export default function AdminUsersPage() {
 
     const act = (u: User, action: string, value?: boolean) => {
         if (action === "reset-password" && !confirm(`Give ${u.email} a new temporary password? Their current password stops working.`)) return;
-        run(() => api(`/api/admin/users/${u.id}`, { method: "PATCH", body: { action, value } }));
+        run(async () => {
+            const res = await api(`/api/admin/users/${u.id}`, { method: "PATCH", body: { action, value } });
+            // Your own change shows straight away (the nav reads the session, re-read from the account here)
+            if (u.id === session?.user?.uid) await update();
+            return res;
+        });
     };
 
     return (
