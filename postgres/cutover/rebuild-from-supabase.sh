@@ -8,7 +8,9 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 [ $# -ge 1 ] || { echo "usage: $0 <admin email> [...]" >&2; exit 2; }
 
-docker compose down -v
+# Only the app and database: a cloudflared container on the same compose network keeps running
+docker compose rm --stop --force next-tester db
+docker volume rm optotester_pgdata   # docker-compose.yml pins the project name to optotester
 docker compose up -d db
 until docker exec optotester-db pg_isready -U optotester -d optotester -q; do sleep 2; done
 # pg_isready answers before the init scripts finish creating the base schema
