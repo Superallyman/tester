@@ -47,6 +47,25 @@ interface RatingPickerProps {
     label: string;
 }
 
+// Defined out here, not inside QuizEngine: a component created during render is a new type on every render, so
+// React replaces its buttons each time. Pressing a rating on a card that isn't the active one re-renders on
+// mousedown (the card becomes active), which swapped the button out mid-click and lost the first click.
+function RatingPicker({ current, onSelect, label }: RatingPickerProps) {
+    return (
+        <div style={{ marginTop: 16 }}>
+            <span className="orbit-label" style={{ display: 'block', marginBottom: 8 }}>{label}</span>
+            <div style={{ display: 'flex', gap: 8 }} role="group" aria-label={label}>
+                {[1, 2, 3, 4].map(num => (
+                    <button key={num} aria-pressed={current === num} onClick={() => onSelect(current === num ? undefined : num)}
+                        className="orbit-option" style={{ flex: 1, justifyContent: 'center', padding: '9px 0', fontWeight: 600 }}>
+                        {num}
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+}
+
 export default function QuizEngine({ questionIds }: QuizEngineProps) {
     const [questions, setQuestions] = useState<Question[]>([]);
     const [userSelections, setUserSelections] = useState<Record<string, string[]>>({});
@@ -136,8 +155,9 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
         if (timerRef.current) clearInterval(timerRef.current);
         setIsSubmitting(true);
 
+        // Every answered question is saved, rated or not; a blank one only when rated (a deliberate skip)
         const activitiesToInsert = questions
-            .filter(q => ratings[q.id] !== undefined)
+            .filter(q => ratings[q.id] !== undefined || (userSelections[q.id] || []).length > 0)
             .map(q => {
                 const selected = userSelections[q.id] || [];
                 const isCorrect = selected.length === q.correct_answers.length &&
@@ -145,8 +165,8 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
                 return {
                     question_id: q.id,
                     is_correct: isCorrect,
-                    user_rating: ratings[q.id],
-                    satisfaction_rating: ratings[q.id],
+                    user_rating: ratings[q.id] ?? null,
+                    satisfaction_rating: ratings[q.id] ?? null,
                     submitted_answer: selected,
                 };
             });
@@ -158,7 +178,8 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
                 const satMap: Record<string, number> = {};
                 data.forEach(row => {
                     idMap[row.question_id] = row.id;
-                    satMap[row.question_id] = ratings[row.question_id] as number;
+                    const r = ratings[row.question_id];
+                    if (r !== undefined) satMap[row.question_id] = r;
                 });
                 setActivityIds(idMap);
                 setSatisfaction(satMap);
@@ -172,17 +193,6 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
         setSatisfaction(prev => ({ ...prev, [qId]: scoreVal }));
         const dbId = activityIds[qId];
 
-        if (dbId && scoreVal === undefined) {
-            const ok = await api(`/api/activity/${dbId}`, { method: 'DELETE' }).then(() => true, () => false);
-            if (ok) {
-                setActivityIds(prev => {
-                    const next = { ...prev };
-                    delete next[qId];
-                    return next;
-                });
-            }
-            return;
-        }
 
         if (!dbId && scoreVal !== undefined) {
             const selected = userSelections[qId] || [];
@@ -200,8 +210,9 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
             return;
         }
 
-        if (dbId && scoreVal !== undefined) {
-            await api(`/api/activity/${dbId}`, { method: 'PATCH', body: { satisfaction_rating: scoreVal } }).catch(console.error);
+        // Clearing the rating keeps the answer in history, just unrated
+        if (dbId) {
+            await api(`/api/activity/${dbId}`, { method: 'PATCH', body: { satisfaction_rating: scoreVal ?? null } }).catch(console.error);
         }
     };
 
@@ -257,20 +268,6 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [questions, active, hasSubmitted, isSubmitting, ratings, satisfaction, userSelections, goTo, rate]);
 
-    const RatingPicker = ({ current, onSelect, label }: RatingPickerProps) => (
-        <div style={{ marginTop: 16 }}>
-            <span className="orbit-label" style={{ display: 'block', marginBottom: 8 }}>{label}</span>
-            <div style={{ display: 'flex', gap: 8 }} role="group" aria-label={label}>
-                {[1, 2, 3, 4].map(num => (
-                    <button key={num} aria-pressed={current === num} onClick={() => onSelect(current === num ? undefined : num)}
-                        className="orbit-option" style={{ flex: 1, justifyContent: 'center', padding: '9px 0', fontWeight: 600 }}>
-                        {num}
-                    </button>
-                ))}
-            </div>
-        </div>
-    );
-
     return (
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: '1rem' }}>
@@ -296,7 +293,7 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
                             </React.Fragment>
                         ))}
                     </div>
-                    <p className="orbit-muted" style={{ marginTop: 10 }}>Keys act on the outlined question. Click a question to choose it. An answer is saved to your history once it has a rating.</p>
+                    <p className="orbit-muted" style={{ marginTop: 10 }}>Keys act on the outlined question. Click a question to choose it. Answers are saved to your history when you submit; a skipped question only if you rate it.</p>
                 </div>
             )}
 
@@ -319,7 +316,7 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
             {(mode === 'one' ? questions.slice(active, active + 1) : questions).map((q, i) => {
                 const idx = mode === 'one' ? active : i;
                 const isActive = idx === active && questions.length > 1 && mode === 'all';
-                const isTracked = hasSubmitted ? !!activityIds[q.id] : ratings[q.id] !== undefined;
+                const isTracked = hasSubmitted ? !!activityIds[q.id] : ratings[q.id] !== undefined || (userSelections[q.id] || []).length > 0;
                 const selected = userSelections[q.id] || [];
                 const isCorrect = selected.length === q.correct_answers.length && selected.every(val => q.correct_answers.includes(val));
                 const multi = q.correct_answers.length > 1;
@@ -393,7 +390,7 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
                                     ? <span className="orbit-badge orbit-badge--good">✓ Saved to history</span>
                                     : <span className="orbit-badge" style={{ opacity: 0.7 }}>Not saved · rate it to save</span>
                             ) : (
-                                <span className="orbit-badge" style={{ opacity: isTracked ? 0.9 : 0.55 }}>{isTracked ? 'Will be saved' : 'Rate it to save it'}</span>
+                                <span className="orbit-badge" style={{ opacity: isTracked ? 0.9 : 0.55 }}>{isTracked ? 'Will be saved' : 'Pick or rate to save it'}</span>
                             )}
                         </div>
                     </div>

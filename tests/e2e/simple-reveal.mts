@@ -78,6 +78,27 @@ try {
     for (let i = 0; i < 5; i++) { await page.keyboard.press('a'); await page.keyboard.press('ArrowRight'); }
     await page.keyboard.press('Control+Enter');
     await page.waitForSelector('text=Quiz Complete!', { timeout: 30000 });
+    // Answered but not rated: still saved, and they count toward the day
+    let saved5: { n: number; unrated: number } | undefined;
+    for (let i = 0; i < 20 && saved5?.n !== 5; i++) {
+        await page.waitForTimeout(300);
+        [saved5] = await query<{ n: number; unrated: number }>(`select count(*)::int as n, count(*) filter (where user_rating is null)::int as unrated from user_activity where user_email = $1`, [E]);
+    }
+    check('Unrated answers are saved on submit', saved5?.n === 5 && saved5.unrated === 5, JSON.stringify(saved5));
+    check('Each card says it was saved', (await page.getByText('✓ Saved to history').count()) === 5);
+    // Rating one afterwards and clearing it again keeps the answer
+    const sat = page.getByRole('group', { name: 'Update Satisfaction (1-4)' }).first();
+    await sat.getByRole('button', { name: '2' }).click();
+    let first: { n: number }[] = [];
+    for (let i = 0; i < 10 && !first[0]?.n; i++) { await page.waitForTimeout(300); first = await query<{ n: number }>(`select count(*)::int as n from user_activity where user_email = $1 and satisfaction_rating = 2`, [E]); }
+    check('One click rates an answer on a card that is not the active one', first[0]?.n === 1);
+    await sat.getByRole('button', { name: '2' }).click();
+    let after: { n: number; rated: number } | undefined;
+    for (let i = 0; i < 20 && after?.rated !== 0; i++) {
+        await page.waitForTimeout(300);
+        [after] = await query<{ n: number; rated: number }>(`select count(*)::int as n, count(*) filter (where satisfaction_rating is not null)::int as rated from user_activity where user_email = $1`, [E]);
+    }
+    check('Clearing a rating keeps the answer', after?.n === 5 && after?.rated === 0, JSON.stringify(after));
 
     const coloured = () => page.locator('.orbit-option.is-right, .orbit-option.is-wrong, .orbit-option.is-missed').count();
     const marks = () => page.locator('.sr-only', { hasText: /^(Your answer, correct|Your answer, incorrect|Correct answer, not picked)$/ }).count();
