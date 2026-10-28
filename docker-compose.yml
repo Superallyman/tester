@@ -43,5 +43,17 @@ services:
       interval: 5s
       retries: 10
 
+  # Cloudflare Tunnel to the app (production only). Starts only with COMPOSE_PROFILES=tunnel and TUNNEL_TOKEN in .env,
+  # so dev never runs it. In the Cloudflare dashboard, point the public hostname at http://next-tester:3000.
+  cloudflared:
+    image: cloudflare/cloudflared:2026.10.0
+    profiles: [tunnel]
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:-}
+    depends_on:
+      - next-tester
+    restart: unless-stopped
+
 volumes:
   pgdata:
