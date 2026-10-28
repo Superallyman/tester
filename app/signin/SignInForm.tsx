@@ -4,6 +4,7 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 
 export default function SignInForm({ callbackUrl, initialError }: { callbackUrl: string; initialError: string | null }) {
@@ -47,7 +48,7 @@ export default function SignInForm({ callbackUrl, initialError }: { callbackUrl:
                 </div>
                 <div className="flex flex-col gap-1.5">
                     <Label htmlFor="password">Password</Label>
-                    <Input id="password" type="password" autoComplete="current-password" required value={password} onChange={e => setPassword(e.target.value)} />
+                    <PasswordInput id="password" autoComplete="current-password" required value={password} onChange={e => setPassword(e.target.value)} />
                 </div>
                 <Button type="submit" size="lg" disabled={busy}>{busy ? "Signing in…" : "Sign in with email"}</Button>
             </form>

@@ -55,8 +55,9 @@ export default function Navbar() {
 
   const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
 
+  // Signed out (or still checking): no links, every page needs an account. Leaderboard only for accounts given it
   const { data: session } = useSession();
-  const visibleLinks = LINKS.filter(link => link.href !== "/leaderboard" || session?.user?.canSeeLeaderboard !== false);
+  const visibleLinks = !session ? [] : LINKS.filter(link => link.href !== "/leaderboard" || session.user?.canSeeLeaderboard === true);
 
   const links = visibleLinks.map(link => (
     <Link key={link.href} href={link.href} aria-current={isActive(link.href) ? "page" : undefined}>

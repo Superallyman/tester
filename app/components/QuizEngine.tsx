@@ -10,6 +10,8 @@ import QuestionNotes from './QuestionNotes';
 import { useNotes } from './useNotes';
 import DifficultyLine from './DifficultyLine';
 import { useDifficulty } from './useDifficulty';
+import { useSimpleReveal } from './useSimpleReveal';
+import SimpleRevealSwitch from './SimpleRevealSwitch';
 import { Timer } from 'lucide-react';
 
 interface Question {
@@ -58,6 +60,7 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
     // The question the keyboard acts on; in one-at-a-time mode, the one on screen
     const [active, setActive] = useState(0);
     const [mode, setMode] = useState<QuizMode>('all');
+    const [simpleReveal, setSimpleReveal] = useSimpleReveal();
     const [showHelp, setShowHelp] = useState(false);
     const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
     const { notes, save: saveNote } = useNotes(questionIds);
@@ -309,6 +312,7 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
                             <span style={{ width: `${percentage}%`, transition: 'width 1s' }} />
                         </div>
                     </div>
+                    <SimpleRevealSwitch on={simpleReveal} onChange={setSimpleReveal} />
                 </div>
             )}
 
@@ -362,7 +366,7 @@ export default function QuizEngine({ questionIds }: QuizEngineProps) {
                                     );
                                 }
 
-                                return <ReviewedOption key={optIdx} letter={LETTERS[optIdx]} text={opt} picked={wasSelected} correct={isOptCorrect} />;
+                                return <ReviewedOption key={optIdx} letter={LETTERS[optIdx]} text={opt} picked={wasSelected} correct={isOptCorrect} simple={simpleReveal} />;
                             })}
                         </div>
 
