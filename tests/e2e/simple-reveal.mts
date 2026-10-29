@@ -114,6 +114,20 @@ try {
     for (let i = 0; i < 20 && !saved; i++) { await page.waitForTimeout(300); saved = (await call('GET')).data?.simpleReveal === true; }
     check('Switch saves to the account', saved);
     await page.screenshot({ path: 'tests/screenshots-out/simple-reveal.png', fullPage: false });
+
+    // ---- History follows the same setting, and has the same switch
+    await page.goto(BASE + '/history', { waitUntil: 'networkidle' });
+    await page.getByText('5 attempts').waitFor({ timeout: 30000 });
+    let hm = 0;
+    for (let i = 0; i < 20 && hm < 5; i++) { await page.waitForTimeout(300); hm = await marks(); }
+    check('History: simple reveal when it is on', await coloured() === 0 && hm >= 5, String(hm));
+    await page.screenshot({ path: 'tests/screenshots-out/simple-reveal-history.png', fullPage: false });
+    await page.getByRole('switch', { name: 'Simple reveal' }).click();
+    await page.waitForTimeout(300);
+    check('History: coloured answers when it is off', await coloured() >= 5 && await marks() === 0);
+    let off = false;
+    for (let i = 0; i < 20 && !off; i++) { await page.waitForTimeout(300); off = (await call('GET')).data?.simpleReveal === false; }
+    check('History switch saves to the account', off);
     await ctx.close();
 } catch (e) {
     failed++;

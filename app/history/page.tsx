@@ -12,6 +12,8 @@ import QuestionNotes from '../components/QuestionNotes';
 import { useNotes } from '../components/useNotes';
 import DifficultyLine from '../components/DifficultyLine';
 import { useDifficulty } from '../components/useDifficulty';
+import { useSimpleReveal } from '../components/useSimpleReveal';
+import SimpleRevealSwitch from '../components/SimpleRevealSwitch';
 import { Trash2 } from 'lucide-react';
 import { edge } from '@/utils/orbitStyles';
 
@@ -47,6 +49,8 @@ export default function HistoryPage() {
     const historyQuestionIds = useMemo(() => [...new Set(history.map(h => h.question_id))], [history]);
     const { notes, save: saveNote } = useNotes(historyQuestionIds);
     const difficulty = useDifficulty(historyQuestionIds);
+    // The same account setting Quick Test's results use
+    const [simpleReveal, setSimpleReveal] = useSimpleReveal();
     const [loading, setLoading] = useState(true);
     const [hasMore, setHasMore] = useState(true);
 
@@ -242,6 +246,7 @@ export default function HistoryPage() {
                         <button type="button" role="switch" aria-checked={latestOnly} onClick={() => setLatestOnly(v => !v)} className="orbit-switch" aria-label="Latest attempt per question only" />
                         Latest attempt per question only
                     </label>
+                    <SimpleRevealSwitch on={simpleReveal} onChange={setSimpleReveal} />
                     <span className="orbit-row" style={{ gap: 14 }}>
                         <span className="orbit-label" aria-live="polite">{total === null ? '' : `${total} attempt${total === 1 ? '' : 's'}${activeFilters ? ' match' : ''}`}</span>
                         {activeFilters > 0 && <button type="button" onClick={clearFilters} className="orbit-btn orbit-btn--ghost">Clear filters</button>}
@@ -271,7 +276,9 @@ export default function HistoryPage() {
                             <div style={{ display: 'flex', gap: '15px', alignItems: 'center', flexWrap: 'wrap' }}>
                                 <div>
                                     <label style={{ display: 'block', fontSize: '0.6rem', opacity: 0.6, marginBottom: '4px', fontWeight: 'bold' }}>CONFIDENCE</label>
-                                    <span style={{ fontWeight: 'bold', color: 'var(--orbit-accent)' }}>{item.user_rating != null ? `${item.user_rating}/4` : '—'}</span>
+                                    {item.user_rating != null
+                                        ? <span style={{ fontWeight: 'bold', color: 'var(--orbit-accent)' }}>{item.user_rating}/4</span>
+                                        : <span className="orbit-muted" title="Not rated">—</span>}
                                 </div>
                                 <div>
                                     <label style={{ display: 'block', fontSize: '0.6rem', opacity: 0.6, marginBottom: '4px', fontWeight: 'bold' }}>SATISFACTION</label>
@@ -308,7 +315,7 @@ export default function HistoryPage() {
                                 const wasSelected = item.submitted_answer?.includes(opt);
                                 const isCorrect = item.questions.correct_answers.includes(opt);
 
-                                return <ReviewedOption key={idx} letter={String.fromCharCode(65 + idx)} text={decodedOpt} picked={!!wasSelected} correct={isCorrect} />;
+                                return <ReviewedOption key={idx} letter={String.fromCharCode(65 + idx)} text={decodedOpt} picked={!!wasSelected} correct={isCorrect} simple={simpleReveal} />;
                             })}
                         </div>
 
