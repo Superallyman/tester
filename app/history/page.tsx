@@ -263,7 +263,7 @@ export default function HistoryPage() {
             {/* List */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 {history.map((item) => (
-                    <div key={item.id} className="orbit-card" style={{ padding: '1.4rem', position: 'relative', ...edge(item.is_correct ? 'var(--orbit-good)' : 'var(--orbit-bad)') }}>
+                    <div key={item.id} className="orbit-card" style={{ padding: '1.4rem', position: 'relative', ...(simpleReveal ? {} : edge(item.is_correct ? 'var(--orbit-good)' : 'var(--orbit-bad)')) }}>
 
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '15px' }}>
                             <div style={{ minWidth: 0 }}>

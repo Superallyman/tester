@@ -121,10 +121,13 @@ try {
     let hm = 0;
     for (let i = 0; i < 20 && hm < 5; i++) { await page.waitForTimeout(300); hm = await marks(); }
     check('History: simple reveal when it is on', await coloured() === 0 && hm >= 5, String(hm));
+    const edges = () => page.locator('.orbit-card').evaluateAll(cards => cards.filter(c => /3px 0px 0px( 0px)? inset/.test(getComputedStyle(c).boxShadow)).length);
+    check('History: no red or green card edges when it is on', await edges() === 0);
     await page.screenshot({ path: 'tests/screenshots-out/simple-reveal-history.png', fullPage: false });
     await page.getByRole('switch', { name: 'Simple reveal' }).click();
     await page.waitForTimeout(300);
     check('History: coloured answers when it is off', await coloured() >= 5 && await marks() === 0);
+    check('History: card edges back when it is off', await edges() >= 5);
     let off = false;
     for (let i = 0; i < 20 && !off; i++) { await page.waitForTimeout(300); off = (await call('GET')).data?.simpleReveal === false; }
     check('History switch saves to the account', off);
